@@ -3,232 +3,559 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Fincantieri Monfalcone — Simulazione Viabilità</title>
+<title>Fincantieri Monfalcone — Simulazione Viabilità Camion</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23c9a84c'/><text x='16' y='22' text-anchor='middle' font-size='18' font-weight='900' fill='%23001d3d'>FC</text></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'SF Mono',monospace;background:#080c12;color:#d1d5db;overflow:hidden;height:100vh;display:flex;flex-direction:column}
-#header{padding:10px 15px;background:#001d3d;border-bottom:2px solid #c9a84c;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
-#clock{background:#0d1520;padding:5px 12px;border-radius:4px;border:1px solid #1a3050;font-size:18px;font-weight:700;color:#c9a84c;font-variant-numeric:tabular-nums}
-.btn{padding:5px 12px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;text-transform:uppercase}
+body{font-family:'SF Mono','JetBrains Mono','Fira Code',monospace;background:#080c12;color:#d1d5db;overflow:hidden;height:100vh;display:flex;flex-direction:column}
+#header{padding:7px 14px;background:linear-gradient(90deg,#001d3d,#0a1628);border-bottom:2px solid #c9a84c;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:6px}
+#header .logo{width:26px;height:26px;border-radius:3px;background:#c9a84c;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px;color:#001d3d}
+#header .title{font-size:12px;font-weight:700;color:#fff;letter-spacing:1px}
+#header .sub{font-size:7px;color:#c9a84c;letter-spacing:2px}
+#clock{background:#0d1520;padding:3px 10px;border-radius:3px;border:1px solid #1a3050;font-size:16px;font-weight:700;color:#c9a84c;font-variant-numeric:tabular-nums}
+.btn{padding:3px 10px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;font-family:inherit}
 .btn-play{border:1px solid #c9a84c;background:#001d3d;color:#fff}
+.btn-play.running{border-color:#ef4444;background:#7f1d1d}
+.btn-reset{border:1px solid #333;background:#111;color:#888}
 #main{display:flex;flex:1;overflow:hidden}
-#panel{width:280px;background:#0d1117;border-right:1px solid #1a2030;overflow-y:auto;padding:15px;flex-shrink:0;font-size:11px}
-.section-title{font-size:9px;color:#c9a84c;letter-spacing:2px;margin-bottom:8px;font-weight:700;text-transform:uppercase}
-.stat-box{background:#111827;border:1px solid #1f2937;border-radius:4px;padding:8px;margin-bottom:12px}
-.param-row{margin-bottom:10px}
+#panel{width:260px;background:#0d1117;border-right:1px solid #1a2030;overflow-y:auto;padding:10px;flex-shrink:0;font-size:10px}
+#panel::-webkit-scrollbar{width:4px}#panel::-webkit-scrollbar-thumb{background:#1a2030;border-radius:2px}
+.section-title{font-size:8px;color:#c9a84c;letter-spacing:2px;margin-bottom:5px;font-weight:700;margin-top:10px}
+.section-title:first-child{margin-top:0}
+.stat-box{background:#111827;border:1px solid #1f2937;border-radius:4px;padding:6px;margin-bottom:8px}
+.stat-row{display:flex;justify-content:space-between;margin-bottom:2px}
+.stat-val{font-weight:700}
+.param-row{margin-bottom:5px}
+.param-row .label{display:flex;justify-content:space-between;color:#6b7280}
+.param-row .label b{color:#d1d5db}
 .param-row input[type=range]{width:100%;accent-color:#c9a84c}
-#map{flex:1;background:#080c12}
-/* Stilizzazione Camion */
-.truck-container {
-    width: 20px;
-    height: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.truck-body {
-    width: 16px;
-    height: 8px;
-    border-radius: 1px;
-    position: relative;
-    border: 0.5px solid rgba(0,0,0,0.3);
-}
-.truck-cabin {
-    position: absolute;
-    right: 0; /* Cabina davanti (destra) */
-    top: 0;
-    width: 4px;
-    height: 100%;
-    background: rgba(255,255,255,0.4);
-    border-radius: 0 1px 1px 0;
+.dest-row input[type=range]{accent-color:#ef4444}
+.dest-pct{color:#ef4444;font-weight:700}
+.legend-item{display:flex;align-items:center;gap:5px;padding:1px 0}
+.legend-line{width:12px;height:3px;border-radius:1px}
+.legend-rect{width:10px;height:6px;border-radius:1px}
+.legend-text{color:#9ca3af;font-size:9px}
+.apply-btn{width:100%;padding:4px;border-radius:3px;border:1px solid #c9a84c;background:#001d3d;color:#c9a84c;cursor:pointer;font-size:10px;font-weight:600;font-family:inherit;margin-bottom:8px}
+#mapContainer{flex:1;position:relative}
+#map{width:100%;height:100%}
+#footer{padding:3px 14px;flex-shrink:0;background:#0d1117;border-top:1px solid #1a2030;display:flex;justify-content:space-between;font-size:8px;color:#555}
+.leaflet-container{background:#080c12!important}
+
+.truck-icon{transition:none}
+.truck-body{width:16px;height:8px;border-radius:2px;position:relative}
+.truck-cabin{position:absolute;right:0;top:0;width:4px;height:8px;border-radius:0 2px 2px 0;background:rgba(255,255,255,0.3)}
+.truck-label{position:absolute;top:-13px;left:50%;transform:translateX(-50%);font:bold 7px monospace;white-space:nowrap}
+
+.speed-label{font-size:10px;color:#c9a84c;font-weight:700;min-width:32px;text-align:center}
+
+@media(max-width:768px){
+  #panel{width:200px;font-size:9px}
+  #header .title{font-size:10px}
 }
 </style>
 </head>
 <body>
 
 <div id="header">
-  <div style="display:flex;align-items:center;gap:10px">
-    <div style="background:#c9a84c;color:#001d3d;padding:4px 8px;font-weight:900;border-radius:3px">FC</div>
-    <div><b style="color:white;font-size:14px">FINCANTIERI MONFALCONE</b><br><span style="font-size:9px;color:#c9a84c">DIREZIONE DI MARCIA - MAX 15 KM/H</span></div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div class="logo">FC</div>
+    <div><div class="title">FINCANTIERI MONFALCONE</div><div class="sub">SIMULAZIONE FLUSSI CAMION — COLLO DI BOTTIGLIA PESA (M/M/1 FIFO)</div></div>
   </div>
-  <div style="display:flex;align-items:center;gap:15px">
+  <div style="display:flex;align-items:center;gap:8px">
     <div id="clock">07:00</div>
     <button class="btn btn-play" id="btnPlay" onclick="toggleSim()">▶ Avvia</button>
-    <button class="btn" style="background:#111;color:#888;border:1px solid #333" onclick="resetSim()">RESET</button>
+    <button class="btn btn-reset" onclick="resetSim()">↺</button>
+    <span style="font-size:9px;color:#6b7280">Tempo</span>
+    <input type="range" id="speedSlider" min="0" max="8" value="0" step="1" style="width:70px;accent-color:#c9a84c" oninput="setTimeScale(+this.value)">
+    <span class="speed-label" id="speedLabel">1x</span>
   </div>
 </div>
 
 <div id="main">
   <div id="panel">
-    <div class="section-title">INFO FLUSSI</div>
+    <div class="section-title">PESA — STATO CODE</div>
     <div class="stat-box">
-        <div style="display:flex;justify-content:space-between"><span>In coda (ENTRATA):</span><b id="qIn" style="color:#22c55e">0</b></div>
-        <div style="display:flex;justify-content:space-between"><span>In coda (USCITA):</span><b id="qOut" style="color:#22c55e">0</b></div>
+      <div class="stat-row"><span>Coda ENTRATA</span><span class="stat-val" id="qIn" style="color:#22c55e">0</span></div>
+      <div class="stat-row"><span>Coda USCITA</span><span class="stat-val" id="qOut" style="color:#22c55e">0</span></div>
+      <div style="border-top:1px solid #1f2937;padding-top:3px;margin-top:2px;font-size:9px;color:#6b7280">
+        Max IN: <b id="maxIn" style="color:#fff">0</b> · Max OUT: <b id="maxOut" style="color:#fff">0</b>
+      </div>
+      <div style="font-size:9px;color:#6b7280">Serviti: <b id="served" style="color:#22c55e">0</b> · Attivi: <b id="active" style="color:#fff">0</b></div>
+      <div style="font-size:9px;color:#6b7280;margin-top:2px">ρ ≈ <b id="rho" style="color:#22c55e">0</b></div>
     </div>
-    
-    <div class="section-title">CONFIGURAZIONE</div>
-    <div class="param-row">
-        <label style="display:flex;justify-content:space-between"><span>Camion/giorno:</span><b id="v_t">30</b></label>
-        <input type="range" min="10" max="100" value="30" id="s_t" oninput="document.getElementById('v_t').textContent=this.value">
-    </div>
-    <div class="param-row">
-        <label style="display:flex;justify-content:space-between"><span>Tempo Pesa (min):</span><b id="v_p">8</b></label>
-        <input type="range" min="3" max="20" value="8" id="s_p" oninput="document.getElementById('v_p').textContent=this.value">
-    </div>
-    <button class="btn btn-play" style="width:100%;margin-top:10px" onclick="resetSim()">Applica Parametri</button>
-    
-    <div style="margin-top:20px; font-size:9px; color:#555; line-height:1.4">
-        * Rotte visualizzate con linee spesse.<br>
-        * Velocità reale simulata: 15 km/h.<br>
-        * Il camion ruota in direzione della strada.
-    </div>
+
+    <div class="section-title">PARAMETRI</div>
+    <div class="param-row"><div class="label"><span>Camion / giorno</span><b id="v_trucks">30</b></div><input type="range" min="5" max="80" value="30" id="s_trucks" oninput="document.getElementById('v_trucks').textContent=this.value"></div>
+    <div class="param-row"><div class="label"><span>Tempo pesa (min)</span><b id="v_pesa">8</b></div><input type="range" min="3" max="20" value="8" id="s_pesa" oninput="document.getElementById('v_pesa').textContent=this.value"></div>
+    <div class="param-row"><div class="label"><span>Tempo scarico (min)</span><b id="v_unload">25</b></div><input type="range" min="10" max="60" value="25" id="s_unload" oninput="document.getElementById('v_unload').textContent=this.value"></div>
+    <button class="apply-btn" onclick="applyAndReset()">Applica e Riavvia</button>
+
+    <div class="section-title">DISTRIBUZIONE DESTINAZIONI</div>
+    <div id="destSliders"></div>
+
+    <div class="section-title">LEGENDA</div>
+    <div class="legend-item"><div class="legend-line" style="background:#ef4444"></div><span class="legend-text">Percorso Riva E/D</span></div>
+    <div class="legend-item"><div class="legend-line" style="background:#a855f7"></div><span class="legend-text">Percorso Mag. 51/Gen.</span></div>
+    <div class="legend-item"><div class="legend-line" style="background:#22c55e"></div><span class="legend-text">Percorso Parco Lamiere</span></div>
+    <div class="legend-item"><div class="legend-rect" style="background:#ef4444"></div><span class="legend-text">Camion in transito</span></div>
+    <div class="legend-item"><div class="legend-rect" style="background:#fbbf24"></div><span class="legend-text">Camion in coda PESA</span></div>
+    <div class="legend-item"><div class="legend-rect" style="background:#eab308;border:1px solid #fff"></div><span class="legend-text">Camion in pesatura</span></div>
+    <div class="legend-item"><div class="legend-rect" style="background:#888"></div><span class="legend-text">Camion in scarico</span></div>
   </div>
-  <div id="map"></div>
+  <div id="mapContainer"><div id="map"></div></div>
+</div>
+
+<div id="footer">
+  <span>Percorsi GeoJSON reali · Coda PESA: disciplina FIFO, 1 servitore (M/M/1) · © OpenStreetMap · Esri Satellite</span>
+  <span id="footerStats"></span>
 </div>
 
 <script>
-// --- COORDINATE ORIGINALI ---
+// ═══════════════════════════════════════════════════════════════════
+// ROUTE DATA
+// ═══════════════════════════════════════════════════════════════════
 const R_RIVA=[[13.535155,45.790375],[13.536126,45.790082],[13.536268,45.789942],[13.536411,45.789952],[13.536493,45.790018],[13.536463,45.790121],[13.536419,45.790206],[13.536687,45.790715],[13.536941,45.790966],[13.538402,45.791691],[13.538566,45.791793],[13.539067,45.792177],[13.539217,45.792252],[13.539343,45.792238],[13.539523,45.792104],[13.539727,45.791936],[13.539897,45.791902],[13.540089,45.791934],[13.540476,45.792187],[13.540668,45.792452],[13.540760,45.792542],[13.540967,45.792646],[13.541525,45.792960],[13.541741,45.793085],[13.541929,45.793166],[13.542147,45.793216],[13.542275,45.793319],[13.542392,45.793397],[13.542617,45.793524],[13.543020,45.793753],[13.543117,45.793781],[13.543232,45.793768],[13.543320,45.793710],[13.543719,45.793432],[13.544028,45.793185],[13.544289,45.792960],[13.544787,45.792554],[13.544992,45.792396],[13.546238,45.791408],[13.546593,45.791172],[13.546934,45.790865],[13.547229,45.790533],[13.547426,45.790231],[13.547423,45.790089],[13.547176,45.789921],[13.546967,45.789818],[13.546746,45.789766],[13.546455,45.789978],[13.546074,45.790303],[13.545829,45.790381],[13.545559,45.790453],[13.545327,45.790587],[13.545011,45.790853],[13.544468,45.791281],[13.543935,45.791739],[13.543542,45.792060],[13.542513,45.792888],[13.542244,45.793115],[13.542204,45.793199],[13.542218,45.793339],[13.542088,45.793415],[13.541963,45.793383],[13.541857,45.793263],[13.541668,45.793103],[13.541382,45.792924],[13.540809,45.792603],[13.540574,45.792449],[13.540390,45.792292],[13.540159,45.792131],[13.539881,45.791955],[13.539791,45.791969],[13.539469,45.792159],[13.539260,45.792304],[13.539138,45.792314],[13.538995,45.792202],[13.538675,45.791952],[13.538471,45.791791],[13.538329,45.791682],[13.537911,45.791482],[13.537622,45.791342],[13.537291,45.791186],[13.536993,45.791032],[13.536776,45.790888],[13.536574,45.790665],[13.536366,45.790198],[13.536256,45.790124],[13.536134,45.790118],[13.535363,45.790323],[13.535172,45.790377]];
-const R_MAG51=[[13.535165,45.790384],[13.535732,45.790200],[13.536122,45.790095],[13.536207,45.790005],[13.536312,45.789949],[13.536400,45.789963],[13.536468,45.790025],[13.536460,45.790131],[13.536434,45.790194],[13.536538,45.790409],[13.536689,45.790712],[13.536859,45.790891],[13.537041,45.791019],[13.537367,45.791179],[13.538031,45.791489],[13.538526,45.791758],[13.538900,45.792021],[13.539126,45.792228],[13.539257,45.792267],[13.539368,45.792223],[13.539496,45.792115],[13.539719,45.791947],[13.539868,45.791898],[13.540008,45.791904],[13.540113,45.791948],[13.540492,45.792198],[13.540601,45.792350],[13.540753,45.792528],[13.541667,45.793046],[13.541915,45.793132],[13.542137,45.793192],[13.542236,45.793272],[13.542305,45.793356],[13.543045,45.793775],[13.543186,45.793785],[13.543315,45.793840],[13.543346,45.793901],[13.543185,45.793979],[13.543185,45.794043],[13.543077,45.794000],[13.542963,45.793954],[13.542732,45.794093],[13.541604,45.794766],[13.541395,45.794844],[13.541215,45.794908],[13.540213,45.795719],[13.540206,45.795807],[13.540409,45.795962],[13.540659,45.796204],[13.540920,45.796293],[13.541065,45.796391],[13.541364,45.796573],[13.541430,45.796590],[13.541563,45.796495],[13.541893,45.796218],[13.542530,45.795720],[13.542575,45.795664],[13.542610,45.795582],[13.542603,45.795512],[13.542492,45.795412],[13.541858,45.795026],[13.541591,45.794844],[13.541512,45.794786],[13.541299,45.794852],[13.541167,45.794877],[13.541028,45.794806],[13.540834,45.794672],[13.540733,45.794607],[13.540725,45.794571],[13.540778,45.794498],[13.540884,45.794413],[13.541364,45.794051],[13.541923,45.793612],[13.541978,45.793525],[13.542011,45.793440],[13.541960,45.793352],[13.541877,45.793270],[13.541786,45.793174],[13.541489,45.792974],[13.541002,45.792708],[13.540719,45.792565],[13.540582,45.792476],[13.540382,45.792286],[13.540190,45.792157],[13.539969,45.792011],[13.539872,45.791970],[13.539789,45.791969],[13.539654,45.792036],[13.539272,45.792313],[13.539134,45.792298],[13.538983,45.792195],[13.538578,45.791859],[13.538458,45.791764],[13.538369,45.791709],[13.538114,45.791572],[13.537709,45.791373],[13.537011,45.791052],[13.536889,45.790986],[13.536811,45.790921],[13.536593,45.790690],[13.536362,45.790187],[13.536308,45.790152],[13.536184,45.790101],[13.536089,45.790119],[13.535152,45.790380]];
-const R_PARCO=[[13.535183,45.790385],[13.536115,45.790079],[13.536258,45.789948],[13.536402,45.789940],[13.536493,45.790053],[13.536407,45.790208],[13.536663,45.790697],[13.536960,45.790982],[13.538398,45.791687],[13.539007,45.792131],[13.539227,45.792247],[13.539323,45.792233],[13.539622,45.792014],[13.539801,45.791902],[13.540030,45.791906],[13.540274,45.792049],[13.540460,45.792183],[13.540606,45.792369],[13.540755,45.792529],[13.540753,45.792620],[13.540488,45.792863],[13.539954,45.793332],[13.539547,45.793712],[13.539320,45.793909],[13.538743,45.794378],[13.537925,45.794996],[13.537081,45.795636],[13.536952,45.795773],[13.536958,45.795992],[13.537037,45.796281],[13.537271,45.796451],[13.537628,45.796629],[13.538001,45.796848],[13.538219,45.796975],[13.538289,45.797036],[13.538219,45.797111],[13.538040,45.797294],[13.537763,45.797577],[13.537263,45.798022],[13.537014,45.798312],[13.536820,45.798485],[13.536555,45.798696],[13.536322,45.798897],[13.536126,45.799107],[13.535884,45.799345],[13.535522,45.799643],[13.534579,45.800378],[13.533772,45.801003],[13.533613,45.801132],[13.533583,45.801221],[13.533630,45.801288],[13.533831,45.801414],[13.534290,45.801698],[13.534749,45.801976],[13.534866,45.802045],[13.534903,45.802095],[13.534879,45.802150],[13.534820,45.802217],[13.534462,45.802503],[13.534181,45.802716],[13.534137,45.802772],[13.534409,45.802970],[13.534504,45.803073],[13.534529,45.803134],[13.534462,45.803233],[13.534214,45.803342],[13.533835,45.803493],[13.533485,45.803627],[13.533346,45.803573],[13.533105,45.803410],[13.532524,45.803044],[13.532018,45.802736],[13.531835,45.802575],[13.531698,45.802409],[13.531632,45.802336],[13.531767,45.802179],[13.532085,45.801937],[13.533041,45.801218],[13.533176,45.801149],[13.533435,45.801151],[13.533569,45.801113],[13.533930,45.800843],[13.535222,45.799849],[13.535768,45.799391],[13.536129,45.799059],[13.536822,45.798416],[13.537068,45.798180],[13.537232,45.797984],[13.537719,45.797565],[13.537846,45.797456],[13.537866,45.797357],[13.537780,45.797248],[13.537561,45.797107],[13.537340,45.796961],[13.537242,45.796822],[13.537144,45.796595],[13.537082,45.796417],[13.537082,45.796210],[13.536926,45.796019],[13.536919,45.795875],[13.536924,45.795776],[13.537020,45.795650],[13.537594,45.795215],[13.537712,45.795118],[13.537726,45.795007],[13.537586,45.794850],[13.537238,45.794648],[13.536916,45.794485],[13.536724,45.794433],[13.536484,45.794364],[13.536445,45.794253],[13.536632,45.794108],[13.537023,45.793801],[13.537720,45.793271],[13.537747,45.793196],[13.537808,45.793093],[13.538059,45.793043],[13.538233,45.792974],[13.538650,45.792731],[13.538931,45.792532],[13.539274,45.792194],[13.539511,45.791990],[13.539732,45.791829],[13.539848,45.791768],[13.540044,45.791787],[13.540231,45.791874],[13.540551,45.792081],[13.540621,45.792153],[13.540646,45.792250],[13.540607,45.792322],[13.540485,45.792347],[13.540378,45.792291],[13.540212,45.792192],[13.539974,45.792044],[13.539888,45.791996],[13.539794,45.791975],[13.539637,45.792045],[13.539465,45.792166],[13.539295,45.792279],[13.539198,45.792322],[13.539082,45.792274],[13.538883,45.792124],[13.538586,45.791862],[13.538346,45.791698],[13.538003,45.791519],[13.537195,45.791139],[13.536908,45.790992],[13.536765,45.790884],[13.536586,45.790692],[13.536365,45.790197],[13.536348,45.790165],[13.536269,45.790134],[13.536192,45.790119],[13.536098,45.790119],[13.535149,45.790369]];
+const R_MAG51=[[13.535165,45.790384],[13.535732,45.790200],[13.536122,45.790095],[13.536207,45.790005],[13.536312,45.789949],[13.536400,45.789963],[13.536468,45.790025],[13.536460,45.790131],[13.536434,45.790194],[13.536538,45.790409],[13.536689,45.790712],[13.536859,45.790891],[13.537041,45.791019],[13.537367,45.791179],[13.538031,45.791489],[13.538526,45.791758],[13.538900,45.792021],[13.539126,45.792228],[13.539257,45.792267],[13.539368,45.792223],[13.539496,45.792115],[13.539719,45.791947],[13.539868,45.791898],[13.540008,45.791904],[13.540113,45.791948],[13.540492,45.792198],[13.540601,45.792350],[13.540753,45.792528],[13.541667,45.793046],[13.541915,45.793132],[13.542137,45.793192],[13.542236,45.793272],[13.542305,45.793356],[13.543045,45.793775],[13.543186,45.793785],[13.543315,45.793840],[13.543346,45.793901],[13.543318,45.793979],[13.543185,45.794043],[13.543077,45.794000],[13.542963,45.793954],[13.542732,45.794093],[13.541604,45.794766],[13.541395,45.794844],[13.541215,45.794908],[13.540213,45.795719],[13.540206,45.795807],[13.540409,45.795962],[13.540659,45.796204],[13.540920,45.796293],[13.541065,45.796391],[13.541364,45.796573],[13.541430,45.796590],[13.541563,45.796495],[13.541893,45.796218],[13.542530,45.795720],[13.542575,45.795664],[13.542610,45.795582],[13.542603,45.795512],[13.542492,45.795412],[13.541858,45.795026],[13.541591,45.794844],[13.541512,45.794786],[13.541299,45.794852],[13.541167,45.794877],[13.541028,45.794806],[13.540834,45.794672],[13.540733,45.794607],[13.540725,45.794571],[13.540778,45.794498],[13.540884,45.794413],[13.541364,45.794051],[13.541923,45.793612],[13.541978,45.793525],[13.542011,45.793440],[13.541960,45.793352],[13.541877,45.793270],[13.541786,45.793174],[13.541489,45.792974],[13.541002,45.792708],[13.540719,45.792565],[13.540582,45.792476],[13.540382,45.792286],[13.540190,45.792157],[13.539969,45.792011],[13.539872,45.791970],[13.539789,45.791969],[13.539654,45.792036],[13.539272,45.792313],[13.539134,45.792298],[13.538983,45.792195],[13.538578,45.791859],[13.538458,45.791764],[13.538369,45.791709],[13.538114,45.791572],[13.537709,45.791373],[13.537011,45.791052],[13.536889,45.790986],[13.536811,45.790921],[13.536593,45.790690],[13.536362,45.790187],[13.536308,45.790152],[13.536184,45.790101],[13.536089,45.790119],[13.535152,45.790380]];
+const R_PARCO=[[13.535183,45.790385],[13.536115,45.790079],[13.536258,45.789948],[13.536402,45.789940],[13.536493,45.790053],[13.536407,45.790208],[13.536663,45.790697],[13.536960,45.790982],[13.538398,45.791687],[13.539007,45.792131],[13.539227,45.792247],[13.539323,45.792233],[13.539622,45.792014],[13.539801,45.791902],[13.540030,45.791906],[13.540274,45.792049],[13.540460,45.792183],[13.540606,45.792369],[13.540755,45.792529],[13.540753,45.792620],[13.540488,45.792863],[13.539954,45.793332],[13.539547,45.793712],[13.539320,45.793909],[13.538743,45.794378],[13.537925,45.794996],[13.537081,45.795636],[13.536952,45.795773],[13.536958,45.795992],[13.537037,45.796281],[13.537271,45.796451],[13.537628,45.796629],[13.538001,45.796848],[13.538219,45.796975],[13.538289,45.797036],[13.538219,45.797111],[13.538040,45.797294],[13.537763,45.797577],[13.537263,45.798022],[13.537014,45.798312],[13.536820,45.798485],[13.536555,45.798696],[13.536322,45.798897],[13.536126,45.799107],[13.535884,45.799345],[13.535522,45.799643],[13.534579,45.800378],[13.533772,45.801003],[13.533613,45.801132],[13.533583,45.801221],[13.533630,45.801288],[13.533831,45.801414],[13.534290,45.801698],[13.534749,45.801976],[13.534866,45.802045],[13.534903,45.802095],[13.534879,45.802150],[13.534820,45.802217],[13.534462,45.802503],[13.534181,45.802716],[13.534137,45.802772],[13.534409,45.802970],[13.534504,45.803073],[13.534529,45.803134],[13.534462,45.803233],[13.534214,45.803342],[13.533835,45.803493],[13.533485,45.803627],[13.533346,45.803573],[13.533105,45.803410],[13.532524,45.803044],[13.532018,45.802736],[13.531835,45.802575],[13.531698,45.802409],[13.531632,45.802336],[13.531767,45.802179],[13.532085,45.801937],[13.533041,45.801218],[13.533176,45.801149],[13.533435,45.801151],[13.533569,45.801113],[13.533930,45.800843],[13.535222,45.799849],[13.535768,45.799391],[13.536129,45.799059],[13.536822,45.798416],[13.537068,45.798180],[13.537232,45.797984],[13.537719,45.797565],[13.537846,45.797456],[13.537866,45.797357],[13.537780,45.797248],[13.537561,45.797107],[13.537340,45.796961],[13.537242,45.796822],[13.537144,45.796595],[13.537082,45.796417],[13.536984,45.796210],[13.536926,45.796019],[13.536919,45.795875],[13.536924,45.795776],[13.537020,45.795650],[13.537594,45.795215],[13.537712,45.795118],[13.537726,45.795007],[13.537586,45.794850],[13.537238,45.794648],[13.536916,45.794485],[13.536724,45.794433],[13.536484,45.794364],[13.536445,45.794253],[13.536632,45.794108],[13.537023,45.793801],[13.537720,45.793271],[13.537747,45.793196],[13.537808,45.793093],[13.538059,45.793043],[13.538233,45.792974],[13.538650,45.792731],[13.538931,45.792532],[13.539274,45.792194],[13.539511,45.791990],[13.539732,45.791829],[13.539848,45.791768],[13.540044,45.791787],[13.540231,45.791874],[13.540551,45.792081],[13.540621,45.792153],[13.540646,45.792250],[13.540607,45.792322],[13.540485,45.792347],[13.540378,45.792291],[13.540212,45.792192],[13.539974,45.792044],[13.539888,45.791996],[13.539794,45.791975],[13.539637,45.792045],[13.539465,45.792166],[13.539295,45.792279],[13.539198,45.792322],[13.539082,45.792274],[13.538883,45.792124],[13.538586,45.791862],[13.538346,45.791698],[13.538003,45.791519],[13.537195,45.791139],[13.536908,45.790992],[13.536765,45.790884],[13.536586,45.790692],[13.536365,45.790197],[13.536348,45.790165],[13.536269,45.790134],[13.536192,45.790119],[13.536098,45.790119],[13.535149,45.790369]];
 
 const SPLITS = {riva:44, mag51:53, parco:68};
+const DESTS=[
+  {id:"riva_e",label:"Riva E",lon:13.5438833,lat:45.7917064,routes:["riva"]},
+  {id:"riva_d",label:"Riva D",lon:13.5451702,lat:45.7925032,routes:["riva"]},
+  {id:"mag_gen",label:"Mag. Generale",lon:13.5424533,lat:45.7936233,routes:["riva","mag51"]},
+  {id:"mag_51",label:"Mag. 51",lon:13.5406306,lat:45.7961890,routes:["mag51"]},
+  {id:"tettoia",label:"Tettoia Sottoas.",lon:13.5330823,lat:45.8033946,routes:["parco"]},
+  {id:"parco_travi",label:"P.Lamiere travi",lon:13.5330074,lat:45.8028634,routes:["parco"]},
+  {id:"parco_pra",label:"P.Lamiere PRA",lon:13.5334014,lat:45.8025762,routes:["parco"]},
+  {id:"parco_travi2",label:"P.Lamiere travi2",lon:13.5330706,lat:45.8015713,routes:["parco"]}
+];
 const PESA_IN={lon:13.5404377,lat:45.7921712}, PESA_OUT={lon:13.5403606,lat:45.7922759};
 
-// --- LOGICA DI CALCOLO E ORIENTAMENTO ---
-const METERS_PER_TICK = 25; // 25m ogni 6s = 15 km/h
-const TICKS_PER_MIN = 10;
-const M_LAT = 111320, M_LON = 111320 * Math.cos(45.795 * Math.PI / 180);
+// ═══════════════════════════════════════════════════════════════════
+// PATH MATH — 15 km/h = 250 m/min
+// ═══════════════════════════════════════════════════════════════════
+const COS_LAT = Math.cos(45.795 * Math.PI / 180);
+const M_PER_DEG_LON = 111320 * COS_LAT;
+const M_PER_DEG_LAT = 111320;
+const TRUCK_SPEED_M_PER_MIN = 250;
+const QUEUE_SPACING_M = 14; // meters between queued trucks
 
-function getPathLen(pts) {
-    let l=0;
-    for(let i=1; i<pts.length; i++) {
-        let dx=(pts[i][0]-pts[i-1][0])*M_LON, dy=(pts[i][1]-pts[i-1][1])*M_LAT;
-        l += Math.sqrt(dx*dx+dy*dy);
-    }
-    return l;
+function pathLenM(pts) {
+  let l=0;
+  for(let i=1;i<pts.length;i++){
+    const dx=(pts[i][0]-pts[i-1][0])*M_PER_DEG_LON;
+    const dy=(pts[i][1]-pts[i-1][1])*M_PER_DEG_LAT;
+    l+=Math.sqrt(dx*dx+dy*dy);
+  }
+  return l;
 }
 
-function getPosAt(pts, prog) {
-    if(!pts || pts.length < 2) return {lon:0, lat:0, angle:0};
-    const total = getPathLen(pts);
-    let target = Math.max(0, Math.min(1, prog)) * total;
-    for(let i=1; i<pts.length; i++) {
-        let dx=(pts[i][0]-pts[i-1][0])*M_LON, dy=(pts[i][1]-pts[i-1][1])*M_LAT;
-        let seg = Math.sqrt(dx*dx+dy*dy);
-        if(target <= seg || i === pts.length-1) {
-            let t = seg > 0 ? target/seg : 0;
-            // Angolo: atan2(dy, dx) trasforma in gradi. 
-            // Sottraiamo per il sistema Leaflet/CSS dove 0 è Est e la rotazione è oraria.
-            let angle = Math.atan2(dy, dx) * 180 / Math.PI;
-            return {
-                lon: pts[i-1][0] + (pts[i][0]-pts[i-1][0])*t,
-                lat: pts[i-1][1] + (pts[i][1]-pts[i-1][1])*t,
-                angle: -angle // Ruotiamo l'icona
-            };
-        }
-        target -= seg;
+function posAtLL(pts, prog) {
+  if(!pts||pts.length<2) return {lon:pts[0][0],lat:pts[0][1],angle:0};
+  const totalM=pathLenM(pts);
+  let target=Math.max(0,Math.min(1,prog))*totalM;
+  for(let i=1;i<pts.length;i++){
+    const dx=(pts[i][0]-pts[i-1][0])*M_PER_DEG_LON;
+    const dy=(pts[i][1]-pts[i-1][1])*M_PER_DEG_LAT;
+    const segM=Math.sqrt(dx*dx+dy*dy);
+    if(target<=segM||i===pts.length-1){
+      const t=segM>0?Math.min(target/segM,1):0;
+      const lon=pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t;
+      const lat=pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t;
+      const angle=Math.atan2(dy, dx)*180/Math.PI;
+      return {lon, lat, angle: -angle};
     }
+    target-=segM;
+  }
+  return {lon:pts[pts.length-1][0], lat:pts[pts.length-1][1], angle:0};
 }
 
-// --- SIMULAZIONE ---
-let map, vehicles=[], routeData={}, simTime=420, simRunning=false, simInterval;
-let vehicleMarkers=[];
+function progOfLL(pts, lon, lat) {
+  const totalM=pathLenM(pts);
+  let cum=0, bestD=1e12, bestProg=0;
+  for(let i=1;i<pts.length;i++){
+    const dx=(pts[i][0]-pts[i-1][0])*M_PER_DEG_LON;
+    const dy=(pts[i][1]-pts[i-1][1])*M_PER_DEG_LAT;
+    const segM=Math.sqrt(dx*dx+dy*dy);
+    const ddx=(lon-pts[i-1][0])*M_PER_DEG_LON;
+    const ddy=(lat-pts[i-1][1])*M_PER_DEG_LAT;
+    const t=segM>0?Math.max(0,Math.min(1,(ddx*dx+ddy*dy)/(segM*segM))):0;
+    const px=pts[i-1][0]*M_PER_DEG_LON+dx*t;
+    const py=pts[i-1][1]*M_PER_DEG_LAT+dy*t;
+    const d=Math.sqrt((lon*M_PER_DEG_LON-px)**2+(lat*M_PER_DEG_LAT-py)**2);
+    if(d<bestD){bestD=d;bestProg=(cum+segM*t)/totalM;}
+    cum+=segM;
+  }
+  return bestProg;
+}
 
-function init() {
-    map = L.map('map').setView([45.796, 13.538], 15);
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19}).addTo(map);
+function speedForPath(pts) { return TRUCK_SPEED_M_PER_MIN / pathLenM(pts); }
 
-    // Disegno rotte più visibili
-    const colors = {riva:'#ef4444', mag51:'#a855f7', parco:'#22c55e'};
-    for(const [k, pts] of Object.entries({riva:R_RIVA, mag51:R_MAG51, parco:R_PARCO})) {
-        const s = SPLITS[k];
-        const out = pts.slice(0, s), inn = pts.slice(s);
-        L.polyline(pts.map(p=>[p[1],p[0]]), {color: colors[k], weight: 5, opacity: 0.7}).addTo(map);
-        
-        routeData[k] = {
-            out, inn,
-            spdOut: METERS_PER_TICK / getPathLen(out),
-            spdIn: METERS_PER_TICK / getPathLen(inn)
-        };
+// ═══════════════════════════════════════════════════════════════════
+// SIMULATION STATE
+// ═══════════════════════════════════════════════════════════════════
+let simTime = 420;
+let simRunning = false;
+let rafId = null;
+let lastFrameTime = null;
+let timeScale = 1;
+let vehicles = [];
+let routeData = {};
+let stats = {qIn:0,qOut:0,maxIn:0,maxOut:0,served:0};
+let destDist = {riva_e:15,riva_d:15,mag_gen:15,mag_51:15,tettoia:10,parco_travi:10,parco_pra:10,parco_travi2:10};
+let map, vehicleMarkers = [], poiBadges = [];
+
+const TIME_SCALES = [1, 2, 5, 10, 30, 60, 120, 300, 600];
+const TIME_LABELS = ['1x','2x','5x','10x','30x','1min/s','2min/s','5min/s','10min/s'];
+
+function setTimeScale(idx) {
+  timeScale = TIME_SCALES[idx];
+  document.getElementById('speedLabel').textContent = TIME_LABELS[idx];
+}
+
+function getCfg() {
+  return {
+    trucksPerDay: +document.getElementById('s_trucks').value,
+    pesaTime: +document.getElementById('s_pesa').value,
+    unloadTime: +document.getElementById('s_unload').value
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+window.onload = function() {
+  initMap();
+  initRoutes();
+  buildDestSliders();
+  resetSim();
+};
+
+function initMap() {
+  map = L.map('map',{zoomControl:true}).setView([45.7968,13.5388],15);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:19, attribution:'Tiles &copy; Esri'
+  }).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:19, opacity:0.4
+  }).addTo(map);
+
+  const colors = {riva:'#ef4444',mag51:'#a855f7',parco:'#22c55e'};
+  for(const[k,raw]of Object.entries({riva:R_RIVA,mag51:R_MAG51,parco:R_PARCO})){
+    const ll = raw.map(([lo,la])=>[la,lo]);
+    L.polyline(ll,{color:colors[k],weight:10,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
+    L.polyline(ll,{color:colors[k],weight:4,opacity:0.9,lineCap:'round',lineJoin:'round'}).addTo(map);
+  }
+
+  const pesaHtml=s=>`<div style="background:rgba(0,0,0,0.8);border:2px solid #eab308;border-radius:4px;padding:1px 5px;font:bold 9px monospace;color:#eab308;white-space:nowrap">${s}</div>`;
+  L.marker([PESA_IN.lat,PESA_IN.lon],{icon:L.divIcon({className:'',html:pesaHtml('PESA ▶'),iconSize:[55,22],iconAnchor:[27,11]})}).addTo(map);
+  L.marker([PESA_OUT.lat,PESA_OUT.lon],{icon:L.divIcon({className:'',html:pesaHtml('◀ PESA'),iconSize:[55,22],iconAnchor:[27,11]})}).addTo(map);
+
+  L.marker([45.7903536,13.5351252],{icon:L.divIcon({className:'',html:`<div style="background:#052e16;border:2px solid #22c55e;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font:bold 8px monospace;color:#22c55e">IN</div>`,iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
+
+  for(const d of DESTS){
+    L.marker([d.lat,d.lon],{icon:L.divIcon({className:'',html:`<div style="position:relative"><div style="width:12px;height:12px;background:rgba(0,0,0,0.6);border:2px solid #ef4444;border-radius:50%"></div><div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font:bold 8px monospace;color:#fff;text-shadow:0 0 4px #000,0 0 4px #000;white-space:nowrap">${d.label}</div></div>`,iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);
+  }
+}
+
+function initRoutes() {
+  for(const[k,raw]of Object.entries({riva:R_RIVA,mag51:R_MAG51,parco:R_PARCO})){
+    const si = SPLITS[k];
+    const out=raw.slice(0,si), inn=raw.slice(si);
+    const outLen = pathLenM(out);
+    const innLen = pathLenM(inn);
+    routeData[k] = {
+      out, inn, full:raw, outLen, innLen,
+      pesaInProg: progOfLL(out, PESA_IN.lon, PESA_IN.lat),
+      pesaOutProg: progOfLL(inn, PESA_OUT.lon, PESA_OUT.lat),
+      spdOut: speedForPath(out),
+      spdIn: speedForPath(inn),
+      qSpacingOut: QUEUE_SPACING_M / outLen,
+      qSpacingIn: QUEUE_SPACING_M / innLen
+    };
+  }
+}
+
+function buildDestSliders() {
+  const el = document.getElementById('destSliders');
+  const tot = Object.values(destDist).reduce((s,n)=>s+n,0)||1;
+  el.innerHTML = DESTS.map(d=>{
+    const pct = Math.round((destDist[d.id]||0)/tot*100);
+    return `<div class="param-row dest-row"><div class="label"><span>${d.label}</span><span class="dest-pct" id="dp_${d.id}">${pct}%</span></div><input type="range" min="0" max="50" value="${destDist[d.id]||0}" oninput="updateDest('${d.id}',+this.value)"></div>`;
+  }).join('');
+}
+
+function updateDest(id, val) {
+  destDist[id] = val;
+  const tot = Object.values(destDist).reduce((s,n)=>s+n,0)||1;
+  DESTS.forEach(d=>{
+    const el = document.getElementById('dp_'+d.id);
+    if(el) el.textContent = Math.round((destDist[d.id]||0)/tot*100)+'%';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VEHICLE GENERATION
+// ═══════════════════════════════════════════════════════════════════
+function generateVehicles() {
+  const cfg = getCfg();
+  const v = [];
+  const tot = Object.values(destDist).reduce((s,n)=>s+n,0)||1;
+  const probs = DESTS.map(d=>({...d,p:(destDist[d.id]||0)/tot}));
+
+  for(let i=0; i<cfg.trucksPerDay; i++){
+    let r=Math.random(), cum=0, dest=probs[0];
+    for(const p of probs){cum+=p.p;if(r<=cum){dest=p;break;}}
+    const rk = dest.routes[Math.floor(Math.random()*dest.routes.length)];
+    v.push({
+      id:i, rk, dest:dest.id, destLabel:dest.label,
+      arrival: 420 + Math.random()*540,
+      state:'wait', prog:0, timer:0, queueIdx:0
+    });
+  }
+  return v;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SIMULATION — continuous with fractional dt
+// ═══════════════════════════════════════════════════════════════════
+function simUpdate(dt) {
+  simTime += dt;
+  if(simTime >= 1080) { stopSim(); simTime=1080; return; }
+  const cfg = getCfg();
+
+  for(const v of vehicles) {
+    const r = routeData[v.rk];
+    if(!r) continue;
+
+    switch(v.state) {
+      case 'wait':
+        if(simTime >= v.arrival) { v.state='toPesaIn'; v.prog=0; }
+        break;
+      case 'toPesaIn':
+        v.prog = Math.min(v.prog + r.spdOut * dt, r.pesaInProg);
+        if(v.prog >= r.pesaInProg - 0.0001) { v.prog=r.pesaInProg; v.state='qIn'; }
+        break;
+      case 'qIn': break;
+      case 'sIn':
+        v.timer -= dt;
+        if(v.timer<=0){v.state='toDest';v.prog=r.pesaInProg;}
+        break;
+      case 'toDest':
+        v.prog = Math.min(1, v.prog + r.spdOut * dt);
+        if(v.prog>=1){v.state='unload';v.timer=cfg.unloadTime;}
+        break;
+      case 'unload':
+        v.timer -= dt;
+        if(v.timer<=0){v.state='toPesaOut';v.prog=0;}
+        break;
+      case 'toPesaOut':
+        v.prog = Math.min(v.prog + r.spdIn * dt, r.pesaOutProg);
+        if(v.prog >= r.pesaOutProg - 0.0001){v.prog=r.pesaOutProg;v.state='qOut';}
+        break;
+      case 'qOut': break;
+      case 'sOut':
+        v.timer -= dt;
+        if(v.timer<=0){v.state='toExit';v.prog=r.pesaOutProg;}
+        break;
+      case 'toExit':
+        v.prog = Math.min(1, v.prog + r.spdIn * dt);
+        if(v.prog>=1) v.state='done';
+        break;
     }
-    resetSim();
+  }
+
+  // FIFO queue processing
+  function serveQueue(qState, sState) {
+    const q = vehicles.filter(v=>v.state===qState).sort((a,b)=>a.arrival-b.arrival);
+    if(!vehicles.find(v=>v.state===sState) && q.length>0) {
+      q[0].state = sState;
+      q[0].timer = cfg.pesaTime;
+    }
+  }
+  serveQueue('qIn','sIn');
+  serveQueue('qOut','sOut');
+
+  // Assign queue positions for visual stacking
+  const qInV = vehicles.filter(v=>v.state==='qIn').sort((a,b)=>a.arrival-b.arrival);
+  qInV.forEach((v,i) => { v.queueIdx = i; });
+  const qOutV = vehicles.filter(v=>v.state==='qOut').sort((a,b)=>a.arrival-b.arrival);
+  qOutV.forEach((v,i) => { v.queueIdx = i; });
+
+  // Stats
+  const qI = vehicles.filter(v=>v.state==='qIn'||v.state==='sIn').length;
+  const qO = vehicles.filter(v=>v.state==='qOut'||v.state==='sOut').length;
+  stats.qIn=qI; stats.qOut=qO;
+  stats.maxIn=Math.max(stats.maxIn,qI);
+  stats.maxOut=Math.max(stats.maxOut,qO);
+  stats.served=vehicles.filter(v=>v.state==='done').length;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// MAP MARKER UPDATES
+// ═══════════════════════════════════════════════════════════════════
+function updateMapMarkers() {
+  vehicleMarkers.forEach(m=>map.removeLayer(m));
+  vehicleMarkers=[];
+  poiBadges.forEach(m=>map.removeLayer(m));
+  poiBadges=[];
+
+  const active = vehicles.filter(v=>v.state!=='wait'&&v.state!=='done');
+  for(const v of active) {
+    const r = routeData[v.rk];
+    if(!r) continue;
+
+    let pos;
+
+    if(v.state==='qIn') {
+      // Queued trucks space backwards from pesa along OUT route
+      const offset = (v.queueIdx + 1) * r.qSpacingOut;
+      pos = posAtLL(r.out, Math.max(0, r.pesaInProg - offset));
+    } else if(v.state==='sIn') {
+      pos = posAtLL(r.out, r.pesaInProg);
+    } else if(v.state==='qOut') {
+      // Queued trucks space backwards from pesa-out along IN route
+      const offset = (v.queueIdx + 1) * r.qSpacingIn;
+      pos = posAtLL(r.inn, Math.max(0, r.pesaOutProg - offset));
+    } else if(v.state==='sOut') {
+      pos = posAtLL(r.inn, r.pesaOutProg);
+    } else if(v.state==='toPesaIn'||v.state==='toDest') {
+      pos = posAtLL(r.out, v.prog);
+    } else if(v.state==='unload') {
+      const last = r.out[r.out.length-1];
+      pos = {lon:last[0]+(v.id%5)*0.00004-0.00008, lat:last[1]+(v.id%3)*0.00003-0.00003, angle:0};
+    } else if(v.state==='toPesaOut'||v.state==='toExit') {
+      pos = posAtLL(r.inn, v.prog);
+    } else continue;
+
+    const inQ = v.state==='qIn'||v.state==='qOut';
+    const srv = v.state==='sIn'||v.state==='sOut';
+    const unl = v.state==='unload';
+    const bg = inQ?'#fbbf24':srv?'#eab308':unl?'#888':'#ef4444';
+    const border = inQ||srv?'border:1.5px solid #fff;':'';
+    const opacity = unl?'opacity:0.5;':'';
+    const rot = v.state==='unload'?0:pos.angle;
+
+    const html = `<div style="transform:rotate(${rot}deg);${opacity}">
+      <div class="truck-body" style="background:${bg};${border}">
+        <div class="truck-cabin"></div>
+      </div>
+    </div>`;
+
+    const icon = L.divIcon({className:'truck-icon',html,iconSize:[16,8],iconAnchor:[8,4]});
+    const marker = L.marker([pos.lat, pos.lon],{icon,interactive:false,pane:'markerPane'});
+    marker.addTo(map);
+    vehicleMarkers.push(marker);
+  }
+
+  // PESA queue badges
+  if(stats.qIn>0){
+    const col=stats.qIn>3?'#ef4444':'#fbbf24';
+    const icon=L.divIcon({className:'',html:`<div style="background:${col};border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font:bold 10px monospace;color:#fff;box-shadow:0 0 4px rgba(0,0,0,0.5)">${stats.qIn}</div>`,iconSize:[18,18],iconAnchor:[9,9]});
+    poiBadges.push(L.marker([PESA_IN.lat+0.00025,PESA_IN.lon+0.0004],{icon,interactive:false}).addTo(map));
+  }
+  if(stats.qOut>0){
+    const col=stats.qOut>3?'#ef4444':'#fbbf24';
+    const icon=L.divIcon({className:'',html:`<div style="background:${col};border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font:bold 10px monospace;color:#fff;box-shadow:0 0 4px rgba(0,0,0,0.5)">${stats.qOut}</div>`,iconSize:[18,18],iconAnchor:[9,9]});
+    poiBadges.push(L.marker([PESA_OUT.lat+0.00025,PESA_OUT.lon+0.0004],{icon,interactive:false}).addTo(map));
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UI UPDATES
+// ═══════════════════════════════════════════════════════════════════
+function updateUI() {
+  const h=Math.floor(simTime/60), m=Math.floor(simTime%60);
+  document.getElementById('clock').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+
+  const colQ=n=>n>4?'#ef4444':n>1?'#fbbf24':'#22c55e';
+  document.getElementById('qIn').textContent=stats.qIn;
+  document.getElementById('qIn').style.color=colQ(stats.qIn);
+  document.getElementById('qOut').textContent=stats.qOut;
+  document.getElementById('qOut').style.color=colQ(stats.qOut);
+  document.getElementById('maxIn').textContent=stats.maxIn;
+  document.getElementById('maxOut').textContent=stats.maxOut;
+  document.getElementById('served').textContent=stats.served;
+
+  const act=vehicles.filter(v=>v.state!=='wait'&&v.state!=='done').length;
+  document.getElementById('active').textContent=act;
+
+  const cfg=getCfg();
+  const rho=(cfg.trucksPerDay*cfg.pesaTime*2/540).toFixed(2);
+  const rhoEl=document.getElementById('rho');
+  rhoEl.textContent=rho;
+  rhoEl.style.color=rho>0.8?'#ef4444':'#22c55e';
+
+  document.getElementById('footerStats').textContent=`${act} camion attivi · ${stats.served} serviti · ρ≈${rho}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER LOOP — requestAnimationFrame, smooth continuous motion
+// ═══════════════════════════════════════════════════════════════════
+function renderLoop(timestamp) {
+  if(!simRunning) return;
+
+  if(lastFrameTime === null) {
+    lastFrameTime = timestamp;
+    rafId = requestAnimationFrame(renderLoop);
+    return;
+  }
+
+  const realDeltaMs = Math.min(timestamp - lastFrameTime, 100);
+  lastFrameTime = timestamp;
+
+  // realDeltaMs in real ms → sim minutes
+  // At 1x: 60000 real ms = 1 sim minute (real-time)
+  const simDt = (realDeltaMs / 60000) * timeScale;
+
+  if(simDt > 0) {
+    simUpdate(simDt);
+    updateMapMarkers();
+    updateUI();
+  }
+
+  rafId = requestAnimationFrame(renderLoop);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// CONTROLS
+// ═══════════════════════════════════════════════════════════════════
+function toggleSim() {
+  if(simRunning) stopSim(); else startSim();
+}
+
+function startSim() {
+  if(simTime>=1080) resetSim();
+  simRunning=true;
+  lastFrameTime=null;
+  document.getElementById('btnPlay').textContent='⏸ Pausa';
+  document.getElementById('btnPlay').classList.add('running');
+  rafId = requestAnimationFrame(renderLoop);
+}
+
+function stopSim() {
+  simRunning=false;
+  document.getElementById('btnPlay').textContent='▶ Avvia';
+  document.getElementById('btnPlay').classList.remove('running');
+  if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+  lastFrameTime=null;
 }
 
 function resetSim() {
-    simTime=420; vehicles=[];
-    const n = +document.getElementById('s_t').value;
-    const rks = ['riva','mag51','parco'];
-    for(let i=0; i<n; i++) {
-        vehicles.push({
-            id: i, rk: rks[i%3], state:'wait', prog:0,
-            arrival: 420 + Math.random()*540, timer:0
-        });
-    }
-    updateUI();
+  stopSim();
+  simTime=420;
+  vehicles=generateVehicles();
+  stats={qIn:0,qOut:0,maxIn:0,maxOut:0,served:0};
+  vehicleMarkers.forEach(m=>map.removeLayer(m));
+  vehicleMarkers=[];
+  poiBadges.forEach(m=>map.removeLayer(m));
+  poiBadges=[];
+  updateUI();
 }
 
-function tick() {
-    simTime += 0.1; // +6 secondi
-    if(simTime > 1080) stopSim();
-    
-    vehicles.forEach(v => {
-        const r = routeData[v.rk];
-        if(v.state==='wait' && simTime >= v.arrival) v.state='out';
-        if(v.state==='out') {
-            v.prog += r.spdOut;
-            if(v.prog >= 1) { v.state='unload'; v.timer=200; }
-        }
-        if(v.state==='unload') { v.timer--; if(v.timer<=0) { v.state='in'; v.prog=0; } }
-        if(v.state==='in') {
-            v.prog += r.spdIn;
-            if(v.prog >= 1) v.state='done';
-        }
-    });
-    
-    updateUI();
-    drawVehicles();
-}
-
-function drawVehicles() {
-    vehicleMarkers.forEach(m => map.removeLayer(m));
-    vehicleMarkers = [];
-    
-    vehicles.filter(v=>v.state==='out'||v.state==='in').forEach(v => {
-        const r = routeData[v.rk];
-        const p = getPosAt(v.state==='out' ? r.out : r.inn, v.prog);
-        const color = v.rk==='riva'?'#ef4444':(v.rk==='parco'?'#22c55e':'#a855f7');
-        
-        const html = `
-            <div class="truck-container" style="transform: rotate(${p.angle}deg)">
-                <div class="truck-body" style="background: ${color}">
-                    <div class="truck-cabin"></div>
-                </div>
-            </div>`;
-        
-        const m = L.marker([p.lat, p.lon], {
-            icon: L.divIcon({className:'', html, iconSize:[20,10]})
-        }).addTo(map);
-        vehicleMarkers.push(m);
-    });
-}
-
-function updateUI() {
-    const h=Math.floor(simTime/60), m=Math.floor(simTime%60);
-    document.getElementById('clock').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-    document.getElementById('qIn').textContent = vehicles.filter(v=>v.state==='out' && v.prog<0.2).length;
-}
-
-function toggleSim() {
-    simRunning = !simRunning;
-    document.getElementById('btnPlay').textContent = simRunning ? '⏸ Pausa' : '▶ Avvia';
-    if(simRunning) simInterval = setInterval(tick, 60);
-    else clearInterval(simInterval);
-}
-
-window.onload = init;
+function applyAndReset() { resetSim(); }
 </script>
 </body>
 </html>
