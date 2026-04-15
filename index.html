@@ -982,45 +982,191 @@ function selectRoute(k) {
 }
 
 function exportRoutesPDF() {
-  // Create a printable version
   const visibleRoutes = Object.entries(ROUTES_RAW).filter(([k])=>routeVisibility[k]);
-  let content = `<html><head><style>
-    body{font-family:Arial,sans-serif;margin:20px;color:#333}
-    h1{font-size:18px;border-bottom:2px solid #c9a84c;padding-bottom:8px;color:#001d3d}
-    h2{font-size:14px;color:#001d3d;margin-top:16px}
-    .route-section{margin-bottom:16px;padding:10px;border:1px solid #ddd;border-radius:6px;page-break-inside:avoid}
-    .color-dot{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:6px}
-    table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
-    th,td{padding:4px 8px;border:1px solid #ddd;text-align:left}
-    th{background:#f5f5f5;font-weight:700}
-    .footer{margin-top:20px;font-size:9px;color:#999;border-top:1px solid #ddd;padding-top:8px}
-  </style></head><body>
-    <h1>FINCANTIERI MONFALCONE — Percorsi Viabilità Camion</h1>
-    <p style="font-size:11px;color:#666">Report generato il ${new Date().toLocaleDateString('it-IT')} · Percorsi visualizzati: ${visibleRoutes.length}/${Object.keys(ROUTES_RAW).length}</p>`;
+  const mapEl = document.getElementById('routeMap');
+  const btn = document.querySelector('#routeList .btn-gold');
+  if(btn) btn.textContent = '⏳ Cattura mappa...';
 
+  // Capture the route map as image
+  html2canvas(mapEl, {
+    useCORS: true,
+    allowTaint: true,
+    scale: 2,
+    logging: false,
+    backgroundColor: '#0d1117'
+  }).then(canvas => {
+    const mapImg = canvas.toDataURL('image/png');
+
+    let routeDetails = '';
+    for(const[k,r] of visibleRoutes){
+      const len = pathLenM(r.coords);
+      const timeMin = len / TRUCK_SPEED_M_PER_MIN;
+      const dests = DESTS.filter(d=>d.routes.includes(k));
+      routeDetails += `<div class="route-section">
+        <h2><span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:${r.color};margin-right:6px;vertical-align:middle"></span>${r.label}</h2>
+        <table>
+          <tr><th>Lunghezza</th><td>${Math.round(len)}m</td></tr>
+          <tr><th>Tempo percorrenza (15km/h)</th><td>${timeMin.toFixed(1)} min</td></tr>
+          <tr><th>Punti GPS</th><td>${r.coords.length}</td></tr>
+          <tr><th>Destinazioni</th><td>${dests.map(d=>d.label).join(', ')}</td></tr>
+        </table>
+      </div>`;
+    }
+
+    // Also generate an SVG map of the routes for clean print rendering
+    const allCoords = visibleRoutes.flatMap(([k,r])=>r.coords);
+    const minLon = Math.min(...allCoords.map(c=>c[0]));
+    const maxLon = Math.max(...allCoords.map(c=>c[0]));
+    const minLat = Math.min(...allCoords.map(c=>c[1]));
+    const maxLat = Math.max(...allCoords.map(c=>c[1]));
+    const padF = 0.05;
+    const rangeX = (maxLon-minLon)*(1+padF*2);
+    const rangeY = (maxLat-minLat)*(1+padF*2);
+    const oX = minLon - (maxLon-minLon)*padF;
+    const oY = minLat - (maxLat-minLat)*padF;
+    const svgW = 700, svgH = Math.round(svgW * rangeY / rangeX * (M_PER_DEG_LAT/M_PER_DEG_LON));
+
+    let svgPaths = '';
+    for(const[k,r] of visibleRoutes){
+      const pts = r.coords.map(c => {
+        const x = ((c[0]-oX)/rangeX)*svgW;
+        const y = svgH - ((c[1]-oY)/rangeY)*svgH;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      svgPaths += `<polyline points="${pts}" fill="none" stroke="${r.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`;
+    }
+
+    // Add POI dots
+    let svgPois = '';
+    for(const p of POIs){
+      const x = ((p.lon-oX)/rangeX)*svgW;
+      const y = svgH - ((p.lat-oY)/rangeY)*svgH;
+      if(x>0 && x<svgW && y>0 && y<svgH){
+        svgPois += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#fff" stroke="#333" stroke-width="1"/>`;
+        svgPois += `<text x="${(x+6).toFixed(1)}" y="${(y+3).toFixed(1)}" font-size="7" fill="#333" font-family="Arial">${p.label}</text>`;
+      }
+    }
+
+    const svgMap = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;max-height:400px;background:#e8e8e8;border:1px solid #ccc;border-radius:4px">
+      <rect width="${svgW}" height="${svgH}" fill="#dce6d4"/>
+      ${svgPaths}
+      ${svgPois}
+    </svg>`;
+
+    const content = `<html><head><style>
+      body{font-family:Arial,sans-serif;margin:20px;color:#333}
+      h1{font-size:18px;border-bottom:2px solid #c9a84c;padding-bottom:8px;color:#001d3d}
+      h2{font-size:14px;color:#001d3d;margin-top:16px}
+      .route-section{margin-bottom:16px;padding:10px;border:1px solid #ddd;border-radius:6px;page-break-inside:avoid}
+      table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
+      th,td{padding:4px 8px;border:1px solid #ddd;text-align:left}
+      th{background:#f5f5f5;font-weight:700}
+      .map-section{margin:16px 0;page-break-inside:avoid}
+      .map-section img{width:100%;border:1px solid #ccc;border-radius:4px}
+      .footer{margin-top:20px;font-size:9px;color:#999;border-top:1px solid #ddd;padding-top:8px}
+      @media print{.map-section img{max-height:45vh;object-fit:contain}}
+    </style></head><body>
+      <h1>FINCANTIERI MONFALCONE — Percorsi Viabilità Camion</h1>
+      <p style="font-size:11px;color:#666">Report generato il ${new Date().toLocaleDateString('it-IT')} · Percorsi visualizzati: ${visibleRoutes.length}/${Object.keys(ROUTES_RAW).length}</p>
+
+      <div class="map-section">
+        <h2>Mappa Satellitare</h2>
+        <img src="${mapImg}" alt="Mappa percorsi"/>
+      </div>
+
+      <div class="map-section" style="page-break-before:auto">
+        <h2>Schema Percorsi</h2>
+        ${svgMap}
+        <div style="display:flex;gap:16px;margin-top:6px;flex-wrap:wrap">
+          ${visibleRoutes.map(([k,r])=>`<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:${r.color}"></span>${r.label}</span>`).join('')}
+        </div>
+      </div>
+
+      ${routeDetails}
+
+      <div class="footer">Fincantieri Monfalcone · Simulazione Viabilità Camion · Dati GeoJSON</div>
+    </body></html>`;
+
+    const blob = new Blob([content], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url,'_blank');
+    setTimeout(()=>{ if(w) w.print(); }, 800);
+    if(btn) btn.textContent = '📄 Esporta PDF Percorsi';
+  }).catch(err => {
+    console.error('Map capture failed:', err);
+    if(btn) btn.textContent = '📄 Esporta PDF Percorsi';
+    // Fallback: export without map image
+    exportRoutesPDFFallback(visibleRoutes);
+  });
+}
+
+function exportRoutesPDFFallback(visibleRoutes) {
+  // SVG-only fallback if html2canvas fails
+  const allCoords = visibleRoutes.flatMap(([k,r])=>r.coords);
+  const minLon = Math.min(...allCoords.map(c=>c[0]));
+  const maxLon = Math.max(...allCoords.map(c=>c[0]));
+  const minLat = Math.min(...allCoords.map(c=>c[1]));
+  const maxLat = Math.max(...allCoords.map(c=>c[1]));
+  const padF = 0.05;
+  const rangeX = (maxLon-minLon)*(1+padF*2);
+  const rangeY = (maxLat-minLat)*(1+padF*2);
+  const oX = minLon - (maxLon-minLon)*padF;
+  const oY = minLat - (maxLat-minLat)*padF;
+  const svgW = 700, svgH = Math.round(svgW * rangeY / rangeX * (M_PER_DEG_LAT/M_PER_DEG_LON));
+
+  let svgPaths = '';
+  for(const[k,r] of visibleRoutes){
+    const pts = r.coords.map(c=>{
+      const x=((c[0]-oX)/rangeX)*svgW;
+      const y=svgH-((c[1]-oY)/rangeY)*svgH;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(' ');
+    svgPaths += `<polyline points="${pts}" fill="none" stroke="${r.color}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" opacity="0.85"/>`;
+  }
+  let svgPois = '';
+  for(const p of POIs){
+    const x=((p.lon-oX)/rangeX)*svgW;
+    const y=svgH-((p.lat-oY)/rangeY)*svgH;
+    if(x>0&&x<svgW&&y>0&&y<svgH){
+      svgPois += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#fff" stroke="#333" stroke-width="1"/>`;
+      svgPois += `<text x="${(x+6).toFixed(1)}" y="${(y+3).toFixed(1)}" font-size="7" fill="#333" font-family="Arial">${p.label}</text>`;
+    }
+  }
+
+  let routeDetails = '';
   for(const[k,r] of visibleRoutes){
     const len = pathLenM(r.coords);
     const timeMin = len / TRUCK_SPEED_M_PER_MIN;
     const dests = DESTS.filter(d=>d.routes.includes(k));
-    content += `<div class="route-section">
-      <h2><span class="color-dot" style="background:${r.color}"></span>${r.label}</h2>
-      <table>
-        <tr><th>Lunghezza</th><td>${Math.round(len)}m</td></tr>
-        <tr><th>Tempo percorrenza (15km/h)</th><td>${timeMin.toFixed(1)} min</td></tr>
-        <tr><th>Punti GPS</th><td>${r.coords.length}</td></tr>
-        <tr><th>Destinazioni</th><td>${dests.map(d=>d.label).join(', ')}</td></tr>
+    routeDetails += `<div style="margin-bottom:16px;padding:10px;border:1px solid #ddd;border-radius:6px;page-break-inside:avoid">
+      <h2 style="font-size:14px;color:#001d3d"><span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:${r.color};margin-right:6px;vertical-align:middle"></span>${r.label}</h2>
+      <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:11px">
+        <tr><th style="padding:4px 8px;border:1px solid #ddd;background:#f5f5f5">Lunghezza</th><td style="padding:4px 8px;border:1px solid #ddd">${Math.round(len)}m</td></tr>
+        <tr><th style="padding:4px 8px;border:1px solid #ddd;background:#f5f5f5">Tempo percorrenza</th><td style="padding:4px 8px;border:1px solid #ddd">${timeMin.toFixed(1)} min</td></tr>
+        <tr><th style="padding:4px 8px;border:1px solid #ddd;background:#f5f5f5">Destinazioni</th><td style="padding:4px 8px;border:1px solid #ddd">${dests.map(d=>d.label).join(', ')}</td></tr>
       </table>
     </div>`;
   }
 
-  content += `<div class="footer">Fincantieri Monfalcone · Simulazione Viabilità Camion · Dati GeoJSON</div></body></html>`;
+  const html = `<html><head><style>body{font-family:Arial,sans-serif;margin:20px;color:#333}</style></head><body>
+    <h1 style="font-size:18px;border-bottom:2px solid #c9a84c;padding-bottom:8px;color:#001d3d">FINCANTIERI MONFALCONE — Percorsi Viabilità Camion</h1>
+    <p style="font-size:11px;color:#666">Report generato il ${new Date().toLocaleDateString('it-IT')}</p>
+    <div style="margin:16px 0">
+      <svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;max-height:400px;background:#dce6d4;border:1px solid #ccc;border-radius:4px">
+        ${svgPaths}${svgPois}
+      </svg>
+      <div style="display:flex;gap:16px;margin-top:6px;flex-wrap:wrap">
+        ${visibleRoutes.map(([k,r])=>`<span style="font-size:10px;display:flex;align-items:center;gap:4px"><span style="display:inline-block;width:14px;height:4px;border-radius:2px;background:${r.color}"></span>${r.label}</span>`).join('')}
+      </div>
+    </div>
+    ${routeDetails}
+    <div style="margin-top:20px;font-size:9px;color:#999;border-top:1px solid #ddd;padding-top:8px">Fincantieri Monfalcone · Dati GeoJSON</div>
+  </body></html>`;
 
-  const blob = new Blob([content], {type:'text/html'});
+  const blob = new Blob([html], {type:'text/html'});
   const url = URL.createObjectURL(blob);
   const w = window.open(url,'_blank');
-  setTimeout(()=>{
-    if(w) w.print();
-  }, 500);
+  setTimeout(()=>{if(w)w.print();}, 500);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1446,28 +1592,132 @@ function generateRecommendations(cfg, t, avgWaitIn, avgWaitOut, throughput) {
 }
 
 function exportReportPDF() {
-  const content = document.getElementById('reportContent').innerHTML;
-  const html = `<html><head><style>
-    body{font-family:Arial,sans-serif;margin:20px;color:#333;background:#fff;font-size:11px}
-    h3{font-size:12px;color:#001d3d;border-bottom:1px solid #c9a84c;padding-bottom:4px}
-    table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}
-    th,td{padding:3px 6px;border:1px solid #ddd;text-align:left}
-    th{background:#f5f5f5}
-    .stat-box{border:1px solid #ddd;border-radius:4px;padding:8px;text-align:center}
-    .report-section{margin-bottom:16px;page-break-inside:avoid}
-    .monitor-metric{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #eee}
-    svg{max-width:100%}
-    .btn,.btn-gold{display:none!important}
-  </style></head><body>
-    <h1 style="font-size:16px;color:#001d3d;border-bottom:2px solid #c9a84c;padding-bottom:8px">FINCANTIERI MONFALCONE — Report Simulazione Viabilità</h1>
-    <p style="color:#666;font-size:9px">Generato: ${new Date().toLocaleString('it-IT')}</p>
-    ${content}
-  </body></html>`;
+  const reportContent = document.getElementById('reportContent').innerHTML;
+  const mapEl = document.getElementById('map');
+  const reportBtn = document.querySelector('#reportContent .btn-gold');
+  if(reportBtn) reportBtn.textContent = '⏳ Cattura mappa...';
 
-  const blob = new Blob([html], {type:'text/html'});
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url,'_blank');
-  setTimeout(()=>{if(w)w.print();},500);
+  // Capture the simulation map
+  html2canvas(mapEl, {
+    useCORS: true,
+    allowTaint: true,
+    scale: 2,
+    logging: false,
+    backgroundColor: '#080c12'
+  }).then(canvas => {
+    const mapImg = canvas.toDataURL('image/png');
+
+    // Also generate SVG schema of all routes
+    const allCoords = Object.values(ROUTES_RAW).flatMap(r=>r.coords);
+    const minLon = Math.min(...allCoords.map(c=>c[0]));
+    const maxLon = Math.max(...allCoords.map(c=>c[0]));
+    const minLat = Math.min(...allCoords.map(c=>c[1]));
+    const maxLat = Math.max(...allCoords.map(c=>c[1]));
+    const padF = 0.05;
+    const rangeX = (maxLon-minLon)*(1+padF*2);
+    const rangeY = (maxLat-minLat)*(1+padF*2);
+    const oX = minLon - (maxLon-minLon)*padF;
+    const oY = minLat - (maxLat-minLat)*padF;
+    const svgW = 700, svgH = Math.round(svgW * rangeY / rangeX * (M_PER_DEG_LAT/M_PER_DEG_LON));
+
+    let svgPaths = '';
+    for(const[k,r] of Object.entries(ROUTES_RAW)){
+      const pts = r.coords.map(c=>{
+        const x=((c[0]-oX)/rangeX)*svgW;
+        const y=svgH-((c[1]-oY)/rangeY)*svgH;
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      svgPaths += `<polyline points="${pts}" fill="none" stroke="${r.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" opacity="0.8"/>`;
+    }
+    let svgPois = '';
+    for(const p of POIs){
+      const x=((p.lon-oX)/rangeX)*svgW;
+      const y=svgH-((p.lat-oY)/rangeY)*svgH;
+      if(x>0&&x<svgW&&y>0&&y<svgH){
+        svgPois += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" fill="#fff" stroke="#333" stroke-width="0.8"/>`;
+        svgPois += `<text x="${(x+5).toFixed(1)}" y="${(y+3).toFixed(1)}" font-size="6.5" fill="#333" font-family="Arial">${p.label}</text>`;
+      }
+    }
+
+    const svgMap = `<svg viewBox="0 0 ${svgW} ${svgH}" style="width:100%;max-height:350px;background:#dce6d4;border:1px solid #ccc;border-radius:4px">
+      <rect width="${svgW}" height="${svgH}" fill="#dce6d4"/>
+      ${svgPaths}${svgPois}
+    </svg>`;
+
+    const cfg = getCfg();
+
+    const html = `<html><head><style>
+      body{font-family:Arial,sans-serif;margin:20px;color:#333;background:#fff;font-size:11px}
+      h1{font-size:16px;color:#001d3d;border-bottom:2px solid #c9a84c;padding-bottom:8px}
+      h2{font-size:13px;color:#001d3d;margin-top:14px}
+      h3{font-size:12px;color:#001d3d;border-bottom:1px solid #c9a84c;padding-bottom:4px}
+      table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}
+      th,td{padding:3px 6px;border:1px solid #ddd;text-align:left}
+      th{background:#f5f5f5}
+      .stat-box{border:1px solid #ddd;border-radius:4px;padding:8px;text-align:center}
+      .report-section{margin-bottom:16px;page-break-inside:avoid}
+      .monitor-metric{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #eee}
+      .map-section{margin:16px 0;page-break-inside:avoid}
+      .map-section img{width:100%;border:1px solid #ccc;border-radius:4px}
+      svg{max-width:100%}
+      .btn,.btn-gold{display:none!important}
+      @media print{
+        .map-section img{max-height:40vh;object-fit:contain}
+        .page-break{page-break-before:always}
+      }
+    </style></head><body>
+      <h1>FINCANTIERI MONFALCONE — Report Simulazione Viabilità</h1>
+      <p style="color:#666;font-size:9px">Generato: ${new Date().toLocaleString('it-IT')} · Parametri: ${cfg.trucksPerDay} camion, pesa ${cfg.pesaTime} min, scarico ${cfg.unloadTime} min</p>
+
+      <div class="map-section">
+        <h2>Mappa Simulazione</h2>
+        <img src="${mapImg}" alt="Mappa simulazione viabilità"/>
+      </div>
+
+      <div class="map-section">
+        <h2>Schema Percorsi</h2>
+        ${svgMap}
+        <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+          ${Object.entries(ROUTES_RAW).map(([k,r])=>`<span style="font-size:9px;display:flex;align-items:center;gap:3px"><span style="display:inline-block;width:12px;height:3px;border-radius:1px;background:${r.color}"></span>${r.label}</span>`).join('')}
+        </div>
+      </div>
+
+      <div class="page-break"></div>
+
+      ${reportContent}
+
+    </body></html>`;
+
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url,'_blank');
+    setTimeout(()=>{if(w)w.print();}, 800);
+    if(reportBtn) reportBtn.textContent = '📄 Esporta Report PDF';
+  }).catch(err => {
+    console.error('Map capture failed:', err);
+    if(reportBtn) reportBtn.textContent = '📄 Esporta Report PDF';
+    // Fallback without map screenshot
+    const html = `<html><head><style>
+      body{font-family:Arial,sans-serif;margin:20px;color:#333;background:#fff;font-size:11px}
+      h3{font-size:12px;color:#001d3d;border-bottom:1px solid #c9a84c;padding-bottom:4px}
+      table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}
+      th,td{padding:3px 6px;border:1px solid #ddd;text-align:left}
+      th{background:#f5f5f5}
+      .stat-box{border:1px solid #ddd;border-radius:4px;padding:8px;text-align:center}
+      .report-section{margin-bottom:16px;page-break-inside:avoid}
+      .monitor-metric{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #eee}
+      svg{max-width:100%}
+      .btn,.btn-gold{display:none!important}
+    </style></head><body>
+      <h1 style="font-size:16px;color:#001d3d;border-bottom:2px solid #c9a84c;padding-bottom:8px">FINCANTIERI MONFALCONE — Report Simulazione Viabilità</h1>
+      <p style="color:#666;font-size:9px">Generato: ${new Date().toLocaleString('it-IT')}</p>
+      ${reportContent}
+    </body></html>`;
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url,'_blank');
+    setTimeout(()=>{if(w)w.print();},500);
+  });
 }
 </script>
 </body>
