@@ -7,140 +7,336 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23c9a84c'/><text x='16' y='22' text-anchor='middle' font-size='18' font-weight='900' fill='%23001d3d'>FC</text></svg>">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
+:root {
+  --bg-dark: #080c12;
+  --bg-panel: #0d1117;
+  --bg-card: #111827;
+  --border: #1a2030;
+  --gold: #c9a84c;
+  --gold-dim: #8a6d2b;
+  --navy: #001d3d;
+  --text: #d1d5db;
+  --text-dim: #6b7280;
+  --text-bright: #fff;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #fbbf24;
+  --purple: #a855f7;
+  --cyan: #22d3ee;
+  --orange: #f97316;
+  --blue: #3b82f6;
+}
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'SF Mono','JetBrains Mono','Fira Code',monospace;background:#080c12;color:#d1d5db;overflow:hidden;height:100vh;display:flex;flex-direction:column}
-#header{padding:7px 14px;background:linear-gradient(90deg,#001d3d,#0a1628);border-bottom:2px solid #c9a84c;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:6px}
-#header .logo{width:26px;height:26px;border-radius:3px;background:#c9a84c;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px;color:#001d3d}
+body{font-family:'SF Mono','JetBrains Mono','Fira Code',monospace;background:var(--bg-dark);color:var(--text);overflow:hidden;height:100vh;display:flex;flex-direction:column}
+
+/* HEADER */
+#header{padding:6px 14px;background:linear-gradient(90deg,var(--navy),#0a1628);border-bottom:2px solid var(--gold);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;flex-wrap:wrap;gap:6px;z-index:100}
+#header .logo{width:26px;height:26px;border-radius:3px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px;color:var(--navy)}
 #header .title{font-size:12px;font-weight:700;color:#fff;letter-spacing:1px}
-#header .sub{font-size:7px;color:#c9a84c;letter-spacing:2px}
-#clock{background:#0d1520;padding:3px 10px;border-radius:3px;border:1px solid #1a3050;font-size:16px;font-weight:700;color:#c9a84c;font-variant-numeric:tabular-nums}
-.btn{padding:3px 10px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;font-family:inherit}
-.btn-play{border:1px solid #c9a84c;background:#001d3d;color:#fff}
-.btn-play.running{border-color:#ef4444;background:#7f1d1d}
+#header .sub{font-size:7px;color:var(--gold);letter-spacing:2px}
+#clock{background:#0d1520;padding:3px 10px;border-radius:3px;border:1px solid #1a3050;font-size:16px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;min-width:56px;text-align:center}
+
+/* TABS */
+#tabBar{display:flex;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.tab{padding:7px 16px;cursor:pointer;font-size:10px;font-weight:600;color:var(--text-dim);letter-spacing:1px;border-bottom:2px solid transparent;white-space:nowrap;transition:all .2s}
+.tab:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold);background:rgba(201,168,76,0.06)}
+
+/* BUTTONS */
+.btn{padding:3px 10px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:600;font-family:inherit;border:1px solid var(--gold);background:var(--navy);color:#fff;transition:all .15s}
+.btn:hover{background:#0a2a5a}
+.btn-play.running{border-color:var(--red);background:#7f1d1d}
 .btn-reset{border:1px solid #333;background:#111;color:#888}
-#main{display:flex;flex:1;overflow:hidden}
-#panel{width:260px;background:#0d1117;border-right:1px solid #1a2030;overflow-y:auto;padding:10px;flex-shrink:0;font-size:10px}
-#panel::-webkit-scrollbar{width:4px}#panel::-webkit-scrollbar-thumb{background:#1a2030;border-radius:2px}
-.section-title{font-size:8px;color:#c9a84c;letter-spacing:2px;margin-bottom:5px;font-weight:700;margin-top:10px}
+.btn-gold{border:1px solid var(--gold);background:var(--gold);color:var(--navy);font-weight:700}
+.btn-gold:hover{background:#d4b35a}
+.btn-sm{padding:2px 8px;font-size:9px}
+
+/* MAIN LAYOUT */
+#main{display:flex;flex:1;overflow:hidden;position:relative}
+.tab-content{display:none;width:100%;height:100%;overflow:hidden}
+.tab-content.active{display:flex}
+
+/* PANEL */
+.panel{width:280px;background:var(--bg-panel);border-right:1px solid var(--border);overflow-y:auto;padding:10px;flex-shrink:0;font-size:10px}
+.panel::-webkit-scrollbar{width:4px}
+.panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.section-title{font-size:8px;color:var(--gold);letter-spacing:2px;margin-bottom:5px;font-weight:700;margin-top:12px;display:flex;align-items:center;gap:5px}
 .section-title:first-child{margin-top:0}
-.stat-box{background:#111827;border:1px solid #1f2937;border-radius:4px;padding:6px;margin-bottom:8px}
-.stat-row{display:flex;justify-content:space-between;margin-bottom:2px}
+.stat-box{background:var(--bg-card);border:1px solid #1f2937;border-radius:4px;padding:6px;margin-bottom:8px}
+.stat-row{display:flex;justify-content:space-between;margin-bottom:2px;line-height:1.5}
 .stat-val{font-weight:700}
 .param-row{margin-bottom:5px}
-.param-row .label{display:flex;justify-content:space-between;color:#6b7280}
-.param-row .label b{color:#d1d5db}
-.param-row input[type=range]{width:100%;accent-color:#c9a84c}
-.dest-row input[type=range]{accent-color:#ef4444}
-.dest-pct{color:#ef4444;font-weight:700}
-.legend-item{display:flex;align-items:center;gap:5px;padding:1px 0}
-.legend-line{width:12px;height:3px;border-radius:1px}
-.legend-rect{width:10px;height:6px;border-radius:1px}
-.legend-text{color:#9ca3af;font-size:9px}
-.apply-btn{width:100%;padding:4px;border-radius:3px;border:1px solid #c9a84c;background:#001d3d;color:#c9a84c;cursor:pointer;font-size:10px;font-weight:600;font-family:inherit;margin-bottom:8px}
+.param-row .label{display:flex;justify-content:space-between;color:var(--text-dim)}
+.param-row .label b{color:var(--text)}
+.param-row input[type=range]{width:100%;accent-color:var(--gold)}
+.dest-row input[type=range]{accent-color:var(--red)}
+.dest-pct{color:var(--red);font-weight:700}
+.apply-btn{width:100%;padding:5px;border-radius:3px;border:1px solid var(--gold);background:var(--navy);color:var(--gold);cursor:pointer;font-size:10px;font-weight:600;font-family:inherit;margin-bottom:8px;transition:all .15s}
+.apply-btn:hover{background:#0a2a5a}
+
+/* MAP */
 #mapContainer{flex:1;position:relative}
 #map{width:100%;height:100%}
-#footer{padding:3px 14px;flex-shrink:0;background:#0d1117;border-top:1px solid #1a2030;display:flex;justify-content:space-between;font-size:8px;color:#555}
-.leaflet-container{background:#080c12!important}
+.leaflet-container{background:var(--bg-dark)!important}
 
+/* LEGEND */
+.legend-item{display:flex;align-items:center;gap:5px;padding:2px 0}
+.legend-line{width:14px;height:3px;border-radius:1px}
+.legend-rect{width:10px;height:6px;border-radius:1px}
+.legend-text{color:#9ca3af;font-size:9px}
+
+/* TRUCK ICONS */
 .truck-icon{transition:none}
 .truck-body{width:16px;height:8px;border-radius:2px;position:relative}
 .truck-cabin{position:absolute;right:0;top:0;width:4px;height:8px;border-radius:0 2px 2px 0;background:rgba(255,255,255,0.3)}
 .truck-label{position:absolute;top:-13px;left:50%;transform:translateX(-50%);font:bold 7px monospace;white-space:nowrap}
+.speed-label{font-size:10px;color:var(--gold);font-weight:700;min-width:32px;text-align:center}
 
-.speed-label{font-size:10px;color:#c9a84c;font-weight:700;min-width:32px;text-align:center}
+/* FOOTER */
+#footer{padding:3px 14px;flex-shrink:0;background:var(--bg-panel);border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:8px;color:#555}
 
-@media(max-width:768px){
-  #panel{width:200px;font-size:9px}
-  #header .title{font-size:10px}
+/* TAB 1: ROUTE VIEWER */
+#routeViewerContent{display:flex;flex:1;overflow:hidden}
+#routeList{width:260px;background:var(--bg-panel);border-right:1px solid var(--border);overflow-y:auto;padding:10px;flex-shrink:0}
+.route-card{background:var(--bg-card);border:1px solid #1f2937;border-radius:5px;padding:8px;margin-bottom:6px;cursor:pointer;transition:all .15s}
+.route-card:hover{border-color:var(--gold-dim)}
+.route-card.selected{border-color:var(--gold);background:rgba(201,168,76,0.08)}
+.route-header{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.route-color{width:18px;height:4px;border-radius:2px}
+.route-name{font-size:10px;font-weight:700;color:var(--text-bright)}
+.route-info{font-size:8px;color:var(--text-dim)}
+.route-toggle{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--text-dim);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;flex-shrink:0}
+.route-toggle.on{border-color:var(--green);background:rgba(34,197,94,0.2);color:var(--green)}
+#routeMapContainer{flex:1;position:relative}
+#routeMap{width:100%;height:100%}
+
+/* TAB 3: MONITOR */
+#monitorContent{flex:1;overflow-y:auto;padding:16px;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;align-content:start}
+.monitor-card{background:var(--bg-card);border:1px solid #1f2937;border-radius:6px;padding:12px;min-height:120px}
+.monitor-card h3{font-size:9px;color:var(--gold);letter-spacing:2px;margin-bottom:8px;font-weight:700}
+.monitor-metric{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04);font-size:10px}
+.monitor-metric:last-child{border-bottom:none}
+.metric-label{color:var(--text-dim)}
+.metric-value{font-weight:700}
+
+/* TAB 4: REPORT */
+#reportContent{flex:1;overflow-y:auto;padding:16px}
+.report-section{background:var(--bg-card);border:1px solid #1f2937;border-radius:6px;padding:14px;margin-bottom:12px}
+.report-section h3{font-size:9px;color:var(--gold);letter-spacing:2px;margin-bottom:10px;font-weight:700}
+.report-table{width:100%;border-collapse:collapse;font-size:10px}
+.report-table th{text-align:left;padding:4px 8px;border-bottom:1px solid #1f2937;color:var(--gold);font-size:8px;letter-spacing:1px;font-weight:700}
+.report-table td{padding:4px 8px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.report-table tr:hover td{background:rgba(255,255,255,0.02)}
+
+/* CHART CANVAS */
+.chart-container{width:100%;height:200px;position:relative;margin-top:8px}
+.chart-container canvas{width:100%!important;height:100%!important}
+
+/* BAR CHART - CSS */
+.bar-chart{display:flex;align-items:flex-end;gap:3px;height:120px;padding:0 4px}
+.bar-col{display:flex;flex-direction:column;align-items:center;flex:1;gap:2px}
+.bar{width:100%;border-radius:2px 2px 0 0;min-height:1px;transition:height .3s}
+.bar-label{font-size:7px;color:var(--text-dim);writing-mode:vertical-rl;transform:rotate(180deg);max-height:50px;overflow:hidden;text-overflow:ellipsis}
+.bar-val{font-size:7px;color:var(--text);font-weight:700}
+
+/* BADGE */
+.badge{display:inline-block;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:700}
+.badge-green{background:rgba(34,197,94,0.15);color:var(--green)}
+.badge-red{background:rgba(239,68,68,0.15);color:var(--red)}
+.badge-yellow{background:rgba(251,191,36,0.15);color:var(--yellow)}
+.badge-blue{background:rgba(59,130,246,0.15);color:var(--blue)}
+
+/* PRINT */
+@media print {
+  body{background:#fff!important;color:#000!important}
+  #header,#tabBar,#footer,.panel,.btn{display:none!important}
+  .tab-content{display:block!important;overflow:visible!important}
+  .monitor-card,.report-section{break-inside:avoid;border-color:#ccc!important;background:#fff!important}
 }
+
+/* SCROLLBARS */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div id="header">
   <div style="display:flex;align-items:center;gap:8px">
     <div class="logo">FC</div>
     <div><div class="title">FINCANTIERI MONFALCONE</div><div class="sub">SIMULAZIONE FLUSSI CAMION — COLLO DI BOTTIGLIA PESA (M/M/1 FIFO)</div></div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <div id="clock">07:00</div>
     <button class="btn btn-play" id="btnPlay" onclick="toggleSim()">▶ Avvia</button>
-    <button class="btn btn-reset" onclick="resetSim()">↺</button>
-    <span style="font-size:9px;color:#6b7280">Tempo</span>
-    <input type="range" id="speedSlider" min="0" max="8" value="0" step="1" style="width:70px;accent-color:#c9a84c" oninput="setTimeScale(+this.value)">
+    <button class="btn btn-reset" onclick="resetSim()">↺ Reset</button>
+    <span style="font-size:9px;color:var(--text-dim)">Velocità</span>
+    <input type="range" id="speedSlider" min="0" max="8" value="0" step="1" style="width:70px;accent-color:var(--gold)" oninput="setTimeScale(+this.value)">
     <span class="speed-label" id="speedLabel">1x</span>
+    <span id="simStatus" style="font-size:9px;padding:2px 6px;border-radius:3px;background:#1a1a2e;color:var(--text-dim)">PRONTO</span>
   </div>
 </div>
 
+<!-- TAB BAR -->
+<div id="tabBar">
+  <div class="tab active" onclick="switchTab(0)">🗺️ SIMULAZIONE</div>
+  <div class="tab" onclick="switchTab(1)">📍 PERCORSI</div>
+  <div class="tab" onclick="switchTab(2)">📊 MONITOR LIVE</div>
+  <div class="tab" onclick="switchTab(3)">📋 REPORT</div>
+</div>
+
+<!-- MAIN -->
 <div id="main">
-  <div id="panel">
-    <div class="section-title">PESA — STATO CODE</div>
-    <div class="stat-box">
-      <div class="stat-row"><span>Coda ENTRATA</span><span class="stat-val" id="qIn" style="color:#22c55e">0</span></div>
-      <div class="stat-row"><span>Coda USCITA</span><span class="stat-val" id="qOut" style="color:#22c55e">0</span></div>
-      <div style="border-top:1px solid #1f2937;padding-top:3px;margin-top:2px;font-size:9px;color:#6b7280">
-        Max IN: <b id="maxIn" style="color:#fff">0</b> · Max OUT: <b id="maxOut" style="color:#fff">0</b>
+
+  <!-- TAB 0: SIMULATION -->
+  <div class="tab-content active" id="tabSim">
+    <div class="panel" id="panel">
+      <div class="section-title">PESA — STATO CODE</div>
+      <div class="stat-box">
+        <div class="stat-row"><span>Coda ENTRATA</span><span class="stat-val" id="qIn" style="color:var(--green)">0</span></div>
+        <div class="stat-row"><span>Coda USCITA</span><span class="stat-val" id="qOut" style="color:var(--green)">0</span></div>
+        <div style="border-top:1px solid #1f2937;padding-top:3px;margin-top:2px;font-size:9px;color:var(--text-dim)">
+          Max IN: <b id="maxIn" style="color:#fff">0</b> · Max OUT: <b id="maxOut" style="color:#fff">0</b>
+        </div>
+        <div style="font-size:9px;color:var(--text-dim)">Serviti: <b id="served" style="color:var(--green)">0</b> / <b id="totalTrucks" style="color:#fff">0</b></div>
+        <div style="font-size:9px;color:var(--text-dim)">Attivi: <b id="active" style="color:#fff">0</b> · In attesa: <b id="waiting" style="color:var(--text-dim)">0</b></div>
+        <div style="font-size:9px;color:var(--text-dim);margin-top:2px">ρ (util. pesa) ≈ <b id="rho" style="color:var(--green)">0</b></div>
       </div>
-      <div style="font-size:9px;color:#6b7280">Serviti: <b id="served" style="color:#22c55e">0</b> · Attivi: <b id="active" style="color:#fff">0</b></div>
-      <div style="font-size:9px;color:#6b7280;margin-top:2px">ρ ≈ <b id="rho" style="color:#22c55e">0</b></div>
+
+      <div class="section-title">PARAMETRI</div>
+      <div class="param-row"><div class="label"><span>Camion / giorno</span><b id="v_trucks">30</b></div><input type="range" min="5" max="150" value="30" id="s_trucks" oninput="document.getElementById('v_trucks').textContent=this.value;refreshDestCounts()"></div>
+      <div class="param-row"><div class="label"><span>Tempo pesa (min)</span><b id="v_pesa">8</b></div><input type="range" min="3" max="20" value="8" id="s_pesa" oninput="document.getElementById('v_pesa').textContent=this.value"></div>
+      <div class="param-row"><div class="label"><span>Tempo scarico (min)</span><b id="v_unload">25</b></div><input type="range" min="10" max="60" value="25" id="s_unload" oninput="document.getElementById('v_unload').textContent=this.value"></div>
+      <button class="apply-btn" onclick="applyAndReset()">Applica e Riavvia</button>
+
+      <div class="section-title">DISTRIBUZIONE DESTINAZIONI</div>
+      <div id="destSliders"></div>
+
+      <div class="section-title">LEGENDA</div>
+      <div class="legend-item"><div class="legend-line" style="background:#12de14"></div><span class="legend-text">Bacino</span></div>
+      <div class="legend-item"><div class="legend-line" style="background:#df1111"></div><span class="legend-text">Ex Capannette Pitturazione</span></div>
+      <div class="legend-item"><div class="legend-line" style="background:#ed7c12"></div><span class="legend-text">Rive</span></div>
+      <div class="legend-item"><div class="legend-line" style="background:#ba3be8"></div><span class="legend-text">Mag. Generale e Mag. 51</span></div>
+      <div class="legend-item"><div class="legend-line" style="background:#1cc4e2"></div><span class="legend-text">Parco Lamiere</span></div>
+      <div style="margin-top:6px"></div>
+      <div class="legend-item"><div class="legend-rect" style="background:var(--red)"></div><span class="legend-text">In transito</span></div>
+      <div class="legend-item"><div class="legend-rect" style="background:var(--yellow)"></div><span class="legend-text">In coda PESA</span></div>
+      <div class="legend-item"><div class="legend-rect" style="background:#eab308;border:1px solid #fff"></div><span class="legend-text">In pesatura</span></div>
+      <div class="legend-item"><div class="legend-rect" style="background:#888"></div><span class="legend-text">In scarico</span></div>
     </div>
-
-    <div class="section-title">PARAMETRI</div>
-    <div class="param-row"><div class="label"><span>Camion / giorno</span><b id="v_trucks">30</b></div><input type="range" min="5" max="80" value="30" id="s_trucks" oninput="document.getElementById('v_trucks').textContent=this.value"></div>
-    <div class="param-row"><div class="label"><span>Tempo pesa (min)</span><b id="v_pesa">8</b></div><input type="range" min="3" max="20" value="8" id="s_pesa" oninput="document.getElementById('v_pesa').textContent=this.value"></div>
-    <div class="param-row"><div class="label"><span>Tempo scarico (min)</span><b id="v_unload">25</b></div><input type="range" min="10" max="60" value="25" id="s_unload" oninput="document.getElementById('v_unload').textContent=this.value"></div>
-    <button class="apply-btn" onclick="applyAndReset()">Applica e Riavvia</button>
-
-    <div class="section-title">DISTRIBUZIONE DESTINAZIONI</div>
-    <div id="destSliders"></div>
-
-    <div class="section-title">LEGENDA</div>
-    <div class="legend-item"><div class="legend-line" style="background:#ef4444"></div><span class="legend-text">Percorso Riva E/D</span></div>
-    <div class="legend-item"><div class="legend-line" style="background:#a855f7"></div><span class="legend-text">Percorso Mag. 51/Gen.</span></div>
-    <div class="legend-item"><div class="legend-line" style="background:#22c55e"></div><span class="legend-text">Percorso Parco Lamiere</span></div>
-    <div class="legend-item"><div class="legend-rect" style="background:#ef4444"></div><span class="legend-text">Camion in transito</span></div>
-    <div class="legend-item"><div class="legend-rect" style="background:#fbbf24"></div><span class="legend-text">Camion in coda PESA</span></div>
-    <div class="legend-item"><div class="legend-rect" style="background:#eab308;border:1px solid #fff"></div><span class="legend-text">Camion in pesatura</span></div>
-    <div class="legend-item"><div class="legend-rect" style="background:#888"></div><span class="legend-text">Camion in scarico</span></div>
+    <div id="mapContainer"><div id="map"></div></div>
   </div>
-  <div id="mapContainer"><div id="map"></div></div>
+
+  <!-- TAB 1: ROUTE VIEWER -->
+  <div class="tab-content" id="tabRoutes">
+    <div id="routeList">
+      <div class="section-title" style="margin-top:0">PERCORSI DISPONIBILI</div>
+      <div id="routeCards"></div>
+      <div style="margin-top:10px">
+        <button class="btn btn-gold" style="width:100%;margin-bottom:4px" onclick="exportRoutesPDF()">📄 Esporta PDF Percorsi</button>
+        <button class="btn" style="width:100%" onclick="toggleAllRoutes()">👁 Attiva/Disattiva Tutti</button>
+      </div>
+      <div class="section-title">INFO PERCORSO</div>
+      <div id="routeInfo" class="stat-box" style="font-size:9px;color:var(--text-dim)">Seleziona un percorso per dettagli</div>
+    </div>
+    <div id="routeMapContainer"><div id="routeMap"></div></div>
+  </div>
+
+  <!-- TAB 2: MONITOR -->
+  <div class="tab-content" id="tabMonitor">
+    <div id="monitorContent"></div>
+  </div>
+
+  <!-- TAB 3: REPORT -->
+  <div class="tab-content" id="tabReport">
+    <div id="reportContent">
+      <div style="text-align:center;padding:40px;color:var(--text-dim)">
+        <div style="font-size:24px;margin-bottom:8px">📋</div>
+        <div style="font-size:11px">Avvia e completa una simulazione per generare il report</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
+<!-- FOOTER -->
 <div id="footer">
-  <span>Percorsi GeoJSON reali · Coda PESA: disciplina FIFO, 1 servitore (M/M/1) · © OpenStreetMap · Esri Satellite</span>
+  <span>Percorsi GeoJSON reali · Coda PESA: FIFO, 1 servitore (M/M/1) · © OpenStreetMap · Esri Satellite</span>
   <span id="footerStats"></span>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// ROUTE DATA
+// ROUTE DATA FROM GEOJSON
 // ═══════════════════════════════════════════════════════════════════
-const R_RIVA=[[13.535155,45.790375],[13.536126,45.790082],[13.536268,45.789942],[13.536411,45.789952],[13.536493,45.790018],[13.536463,45.790121],[13.536419,45.790206],[13.536687,45.790715],[13.536941,45.790966],[13.538402,45.791691],[13.538566,45.791793],[13.539067,45.792177],[13.539217,45.792252],[13.539343,45.792238],[13.539523,45.792104],[13.539727,45.791936],[13.539897,45.791902],[13.540089,45.791934],[13.540476,45.792187],[13.540668,45.792452],[13.540760,45.792542],[13.540967,45.792646],[13.541525,45.792960],[13.541741,45.793085],[13.541929,45.793166],[13.542147,45.793216],[13.542275,45.793319],[13.542392,45.793397],[13.542617,45.793524],[13.543020,45.793753],[13.543117,45.793781],[13.543232,45.793768],[13.543320,45.793710],[13.543719,45.793432],[13.544028,45.793185],[13.544289,45.792960],[13.544787,45.792554],[13.544992,45.792396],[13.546238,45.791408],[13.546593,45.791172],[13.546934,45.790865],[13.547229,45.790533],[13.547426,45.790231],[13.547423,45.790089],[13.547176,45.789921],[13.546967,45.789818],[13.546746,45.789766],[13.546455,45.789978],[13.546074,45.790303],[13.545829,45.790381],[13.545559,45.790453],[13.545327,45.790587],[13.545011,45.790853],[13.544468,45.791281],[13.543935,45.791739],[13.543542,45.792060],[13.542513,45.792888],[13.542244,45.793115],[13.542204,45.793199],[13.542218,45.793339],[13.542088,45.793415],[13.541963,45.793383],[13.541857,45.793263],[13.541668,45.793103],[13.541382,45.792924],[13.540809,45.792603],[13.540574,45.792449],[13.540390,45.792292],[13.540159,45.792131],[13.539881,45.791955],[13.539791,45.791969],[13.539469,45.792159],[13.539260,45.792304],[13.539138,45.792314],[13.538995,45.792202],[13.538675,45.791952],[13.538471,45.791791],[13.538329,45.791682],[13.537911,45.791482],[13.537622,45.791342],[13.537291,45.791186],[13.536993,45.791032],[13.536776,45.790888],[13.536574,45.790665],[13.536366,45.790198],[13.536256,45.790124],[13.536134,45.790118],[13.535363,45.790323],[13.535172,45.790377]];
-const R_MAG51=[[13.535165,45.790384],[13.535732,45.790200],[13.536122,45.790095],[13.536207,45.790005],[13.536312,45.789949],[13.536400,45.789963],[13.536468,45.790025],[13.536460,45.790131],[13.536434,45.790194],[13.536538,45.790409],[13.536689,45.790712],[13.536859,45.790891],[13.537041,45.791019],[13.537367,45.791179],[13.538031,45.791489],[13.538526,45.791758],[13.538900,45.792021],[13.539126,45.792228],[13.539257,45.792267],[13.539368,45.792223],[13.539496,45.792115],[13.539719,45.791947],[13.539868,45.791898],[13.540008,45.791904],[13.540113,45.791948],[13.540492,45.792198],[13.540601,45.792350],[13.540753,45.792528],[13.541667,45.793046],[13.541915,45.793132],[13.542137,45.793192],[13.542236,45.793272],[13.542305,45.793356],[13.543045,45.793775],[13.543186,45.793785],[13.543315,45.793840],[13.543346,45.793901],[13.543318,45.793979],[13.543185,45.794043],[13.543077,45.794000],[13.542963,45.793954],[13.542732,45.794093],[13.541604,45.794766],[13.541395,45.794844],[13.541215,45.794908],[13.540213,45.795719],[13.540206,45.795807],[13.540409,45.795962],[13.540659,45.796204],[13.540920,45.796293],[13.541065,45.796391],[13.541364,45.796573],[13.541430,45.796590],[13.541563,45.796495],[13.541893,45.796218],[13.542530,45.795720],[13.542575,45.795664],[13.542610,45.795582],[13.542603,45.795512],[13.542492,45.795412],[13.541858,45.795026],[13.541591,45.794844],[13.541512,45.794786],[13.541299,45.794852],[13.541167,45.794877],[13.541028,45.794806],[13.540834,45.794672],[13.540733,45.794607],[13.540725,45.794571],[13.540778,45.794498],[13.540884,45.794413],[13.541364,45.794051],[13.541923,45.793612],[13.541978,45.793525],[13.542011,45.793440],[13.541960,45.793352],[13.541877,45.793270],[13.541786,45.793174],[13.541489,45.792974],[13.541002,45.792708],[13.540719,45.792565],[13.540582,45.792476],[13.540382,45.792286],[13.540190,45.792157],[13.539969,45.792011],[13.539872,45.791970],[13.539789,45.791969],[13.539654,45.792036],[13.539272,45.792313],[13.539134,45.792298],[13.538983,45.792195],[13.538578,45.791859],[13.538458,45.791764],[13.538369,45.791709],[13.538114,45.791572],[13.537709,45.791373],[13.537011,45.791052],[13.536889,45.790986],[13.536811,45.790921],[13.536593,45.790690],[13.536362,45.790187],[13.536308,45.790152],[13.536184,45.790101],[13.536089,45.790119],[13.535152,45.790380]];
-const R_PARCO=[[13.535183,45.790385],[13.536115,45.790079],[13.536258,45.789948],[13.536402,45.789940],[13.536493,45.790053],[13.536407,45.790208],[13.536663,45.790697],[13.536960,45.790982],[13.538398,45.791687],[13.539007,45.792131],[13.539227,45.792247],[13.539323,45.792233],[13.539622,45.792014],[13.539801,45.791902],[13.540030,45.791906],[13.540274,45.792049],[13.540460,45.792183],[13.540606,45.792369],[13.540755,45.792529],[13.540753,45.792620],[13.540488,45.792863],[13.539954,45.793332],[13.539547,45.793712],[13.539320,45.793909],[13.538743,45.794378],[13.537925,45.794996],[13.537081,45.795636],[13.536952,45.795773],[13.536958,45.795992],[13.537037,45.796281],[13.537271,45.796451],[13.537628,45.796629],[13.538001,45.796848],[13.538219,45.796975],[13.538289,45.797036],[13.538219,45.797111],[13.538040,45.797294],[13.537763,45.797577],[13.537263,45.798022],[13.537014,45.798312],[13.536820,45.798485],[13.536555,45.798696],[13.536322,45.798897],[13.536126,45.799107],[13.535884,45.799345],[13.535522,45.799643],[13.534579,45.800378],[13.533772,45.801003],[13.533613,45.801132],[13.533583,45.801221],[13.533630,45.801288],[13.533831,45.801414],[13.534290,45.801698],[13.534749,45.801976],[13.534866,45.802045],[13.534903,45.802095],[13.534879,45.802150],[13.534820,45.802217],[13.534462,45.802503],[13.534181,45.802716],[13.534137,45.802772],[13.534409,45.802970],[13.534504,45.803073],[13.534529,45.803134],[13.534462,45.803233],[13.534214,45.803342],[13.533835,45.803493],[13.533485,45.803627],[13.533346,45.803573],[13.533105,45.803410],[13.532524,45.803044],[13.532018,45.802736],[13.531835,45.802575],[13.531698,45.802409],[13.531632,45.802336],[13.531767,45.802179],[13.532085,45.801937],[13.533041,45.801218],[13.533176,45.801149],[13.533435,45.801151],[13.533569,45.801113],[13.533930,45.800843],[13.535222,45.799849],[13.535768,45.799391],[13.536129,45.799059],[13.536822,45.798416],[13.537068,45.798180],[13.537232,45.797984],[13.537719,45.797565],[13.537846,45.797456],[13.537866,45.797357],[13.537780,45.797248],[13.537561,45.797107],[13.537340,45.796961],[13.537242,45.796822],[13.537144,45.796595],[13.537082,45.796417],[13.536984,45.796210],[13.536926,45.796019],[13.536919,45.795875],[13.536924,45.795776],[13.537020,45.795650],[13.537594,45.795215],[13.537712,45.795118],[13.537726,45.795007],[13.537586,45.794850],[13.537238,45.794648],[13.536916,45.794485],[13.536724,45.794433],[13.536484,45.794364],[13.536445,45.794253],[13.536632,45.794108],[13.537023,45.793801],[13.537720,45.793271],[13.537747,45.793196],[13.537808,45.793093],[13.538059,45.793043],[13.538233,45.792974],[13.538650,45.792731],[13.538931,45.792532],[13.539274,45.792194],[13.539511,45.791990],[13.539732,45.791829],[13.539848,45.791768],[13.540044,45.791787],[13.540231,45.791874],[13.540551,45.792081],[13.540621,45.792153],[13.540646,45.792250],[13.540607,45.792322],[13.540485,45.792347],[13.540378,45.792291],[13.540212,45.792192],[13.539974,45.792044],[13.539888,45.791996],[13.539794,45.791975],[13.539637,45.792045],[13.539465,45.792166],[13.539295,45.792279],[13.539198,45.792322],[13.539082,45.792274],[13.538883,45.792124],[13.538586,45.791862],[13.538346,45.791698],[13.538003,45.791519],[13.537195,45.791139],[13.536908,45.790992],[13.536765,45.790884],[13.536586,45.790692],[13.536365,45.790197],[13.536348,45.790165],[13.536269,45.790134],[13.536192,45.790119],[13.536098,45.790119],[13.535149,45.790369]];
+const ROUTES_RAW = {
+  bacino: {
+    id:'bacino', label:'Bacino', color:'#12de14',
+    coords:[[13.535129,45.790377],[13.536084,45.790108],[13.53616,45.790073],[13.536211,45.790013],[13.536288,45.789978],[13.536398,45.789984],[13.536441,45.790037],[13.536454,45.790089],[13.536421,45.790139],[13.536407,45.79018],[13.536549,45.790481],[13.536681,45.790721],[13.536883,45.790918],[13.537107,45.791038],[13.53735,45.791172],[13.537752,45.791361],[13.538106,45.791532],[13.538469,45.791722],[13.538734,45.791913],[13.538963,45.792089],[13.539189,45.792255],[13.539233,45.792265],[13.53929,45.792263],[13.539361,45.792233],[13.539598,45.792049],[13.539723,45.791967],[13.539849,45.79193],[13.53996,45.791927],[13.540136,45.791989],[13.540306,45.792094],[13.540441,45.792184],[13.540577,45.792304],[13.540693,45.792483],[13.540735,45.792586],[13.540681,45.792668],[13.540578,45.79275],[13.539327,45.793887],[13.538196,45.794771],[13.537752,45.795105],[13.537088,45.795662],[13.536943,45.795914],[13.536993,45.796156],[13.537089,45.796341],[13.537394,45.796528],[13.537756,45.796715],[13.5382,45.796978],[13.53823,45.797016],[13.538235,45.797078],[13.538124,45.797244],[13.538014,45.797365],[13.537221,45.798106],[13.536872,45.798428],[13.536453,45.798792],[13.536281,45.798953],[13.535455,45.799695],[13.534532,45.800438],[13.533753,45.801022],[13.5336,45.801147],[13.533579,45.801214],[13.533623,45.801278],[13.53372,45.801361],[13.534045,45.801534],[13.534425,45.801759],[13.534744,45.801943],[13.534871,45.802021],[13.534912,45.802082],[13.534905,45.802139],[13.534842,45.802211],[13.53433,45.8026],[13.534246,45.80266],[13.534182,45.802734],[13.534207,45.80279],[13.534294,45.802866],[13.534444,45.802971],[13.534519,45.803035],[13.534622,45.803111],[13.534729,45.803164],[13.534854,45.803164],[13.535162,45.803199],[13.535304,45.803208],[13.535431,45.803187],[13.535813,45.80311],[13.535964,45.803059],[13.536079,45.803003],[13.536819,45.802592],[13.537037,45.80245],[13.537364,45.802219],[13.538495,45.801302],[13.53857,45.801237],[13.538621,45.801171],[13.53867,45.801078],[13.538726,45.801001],[13.538831,45.800902],[13.538955,45.800788],[13.539119,45.800657],[13.539262,45.800528],[13.539402,45.80039],[13.539649,45.800164],[13.540127,45.799772],[13.540503,45.799466],[13.5407,45.799305],[13.540708,45.799251],[13.540657,45.799181],[13.540552,45.7991],[13.540461,45.799036],[13.540561,45.798941],[13.540758,45.798787],[13.540872,45.79874],[13.541121,45.798465],[13.541575,45.79811],[13.542897,45.797034],[13.543338,45.79668],[13.543511,45.796685],[13.543578,45.796848],[13.542965,45.797525],[13.542019,45.798512],[13.541646,45.798607],[13.541237,45.798661],[13.541074,45.798708],[13.541354,45.798814],[13.541493,45.798918],[13.541543,45.79901],[13.54129,45.799348],[13.541106,45.799516],[13.540908,45.799687],[13.540637,45.799919],[13.540437,45.800078],[13.540331,45.80016],[13.54017,45.800255],[13.540031,45.800295],[13.539825,45.800337],[13.5397,45.800356],[13.539554,45.800396],[13.539411,45.800476],[13.539248,45.800589],[13.539111,45.800707],[13.539013,45.800785],[13.538816,45.800969],[13.538745,45.801043],[13.538664,45.801165],[13.538614,45.801232],[13.53856,45.801288],[13.538415,45.8014],[13.538108,45.801658],[13.537992,45.80175],[13.537872,45.801847],[13.537596,45.802074],[13.537293,45.802306],[13.536924,45.802554],[13.536582,45.802769],[13.536266,45.802936],[13.535984,45.803074],[13.535666,45.80317],[13.535451,45.803215],[13.5352,45.803236],[13.534857,45.803205],[13.534544,45.803226],[13.534202,45.803368],[13.53403,45.803438],[13.533606,45.803599],[13.533377,45.803658],[13.533136,45.803667],[13.533013,45.803664],[13.532862,45.80364],[13.532766,45.803597],[13.532661,45.803528],[13.532487,45.803423],[13.532379,45.803335],[13.532294,45.803262],[13.532162,45.803107],[13.532002,45.802869],[13.531855,45.802671],[13.531619,45.802363],[13.531589,45.80233],[13.531603,45.80229],[13.531671,45.802222],[13.531945,45.802006],[13.532395,45.80168],[13.532761,45.801409],[13.532997,45.801223],[13.533151,45.801144],[13.533239,45.801125],[13.533322,45.801127],[13.533438,45.801135],[13.533523,45.801112],[13.533614,45.801065],[13.533739,45.800969],[13.533915,45.80083],[13.534268,45.800561],[13.534588,45.800315],[13.534998,45.800003],[13.535434,45.799646],[13.535906,45.799246],[13.536395,45.798813],[13.537032,45.798228],[13.537173,45.798084],[13.537264,45.797961],[13.537589,45.797693],[13.537853,45.797448],[13.537887,45.79738],[13.537855,45.797319],[13.537745,45.797245],[13.537654,45.797177],[13.537527,45.797088],[13.537413,45.797013],[13.537317,45.796953],[13.53728,45.796907],[13.537212,45.796794],[13.537172,45.796698],[13.537155,45.796646],[13.537089,45.796482],[13.537037,45.796357],[13.536953,45.79619],[13.536925,45.796075],[13.536905,45.795993],[13.536896,45.795907],[13.536902,45.795823],[13.536956,45.795729],[13.537023,45.795666],[13.53718,45.795537],[13.537384,45.795383],[13.537643,45.795181],[13.537727,45.795101],[13.53773,45.795],[13.537658,45.794903],[13.537452,45.794757],[13.537261,45.794654],[13.537012,45.794518],[13.536849,45.79446],[13.536624,45.794397],[13.536469,45.794365],[13.536429,45.794307],[13.536429,45.794235],[13.536499,45.794184],[13.537667,45.793307],[13.537732,45.793235],[13.537723,45.793191],[13.537757,45.793118],[13.537816,45.793068],[13.537935,45.793044],[13.538096,45.793019],[13.538263,45.792943],[13.538451,45.792827],[13.538704,45.792684],[13.538961,45.792479],[13.539087,45.792355],[13.53928,45.792166],[13.539456,45.792022],[13.539682,45.791852],[13.539827,45.791768],[13.539951,45.791744],[13.540223,45.791815],[13.540373,45.791921],[13.540573,45.792058],[13.540676,45.792166],[13.540701,45.792246],[13.540657,45.792317],[13.540565,45.792368],[13.540621,45.792434],[13.540823,45.79255],[13.541122,45.792711],[13.541371,45.792852],[13.541571,45.792971],[13.541879,45.793118],[13.541974,45.793145],[13.542086,45.793166],[13.542162,45.793193],[13.542212,45.793233],[13.542233,45.793278],[13.542234,45.793343],[13.542154,45.793398],[13.542061,45.793421],[13.542006,45.793408],[13.541937,45.793361],[13.541929,45.793329],[13.541809,45.79319],[13.541734,45.793132],[13.541651,45.793074],[13.540998,45.792704],[13.540679,45.792533],[13.540541,45.792432],[13.540447,45.792364],[13.540372,45.792291],[13.540204,45.792178],[13.539975,45.792027],[13.539887,45.791974],[13.539792,45.791972],[13.539724,45.791995],[13.53955,45.792118],[13.53938,45.792235],[13.539281,45.792297],[13.539191,45.792307],[13.539105,45.792275],[13.538709,45.791969],[13.538501,45.791824],[13.538344,45.791698],[13.538131,45.791589],[13.537724,45.791394],[13.537017,45.79105],[13.536815,45.790934],[13.53665,45.790778],[13.536579,45.790692],[13.536534,45.790565],[13.536366,45.790207],[13.536347,45.790157],[13.536243,45.790112],[13.536132,45.790113],[13.535153,45.790399]]
+  },
+  capannette: {
+    id:'capannette', label:'Ex Capannette Pitturazione', color:'#df1111',
+    coords:[[13.535129,45.790377],[13.536084,45.790108],[13.53616,45.790073],[13.536211,45.790013],[13.536288,45.789978],[13.536398,45.789984],[13.536441,45.790037],[13.536454,45.790089],[13.536421,45.790139],[13.536407,45.79018],[13.536549,45.790481],[13.536681,45.790721],[13.536883,45.790918],[13.537107,45.791038],[13.53735,45.791172],[13.537752,45.791361],[13.538106,45.791532],[13.538469,45.791722],[13.538734,45.791913],[13.538963,45.792089],[13.539189,45.792255],[13.539233,45.792265],[13.53929,45.792263],[13.539361,45.792233],[13.539598,45.792049],[13.539723,45.791967],[13.539849,45.79193],[13.53996,45.791927],[13.540136,45.791989],[13.540306,45.792094],[13.540441,45.792184],[13.540577,45.792304],[13.540693,45.792483],[13.540735,45.792586],[13.540681,45.792668],[13.540578,45.79275],[13.539327,45.793887],[13.538196,45.794771],[13.537752,45.795105],[13.537088,45.795662],[13.536943,45.795914],[13.536993,45.796156],[13.537089,45.796341],[13.537394,45.796528],[13.537756,45.796715],[13.5382,45.796978],[13.53823,45.797016],[13.538235,45.797078],[13.538124,45.797244],[13.538014,45.797365],[13.537221,45.798106],[13.536872,45.798428],[13.536453,45.798792],[13.536281,45.798953],[13.535455,45.799695],[13.534532,45.800438],[13.533753,45.801022],[13.5336,45.801147],[13.533579,45.801214],[13.533623,45.801278],[13.53372,45.801361],[13.534045,45.801534],[13.534425,45.801759],[13.534744,45.801943],[13.534871,45.802021],[13.534912,45.802082],[13.534905,45.802139],[13.534842,45.802211],[13.53433,45.8026],[13.534246,45.80266],[13.534182,45.802734],[13.534207,45.80279],[13.534294,45.802866],[13.534444,45.802971],[13.534519,45.803035],[13.534622,45.803111],[13.534729,45.803164],[13.534854,45.803164],[13.535162,45.803199],[13.535304,45.803208],[13.535431,45.803187],[13.535813,45.80311],[13.535964,45.803059],[13.536079,45.803003],[13.536819,45.802592],[13.537037,45.80245],[13.537364,45.802219],[13.538495,45.801302],[13.53857,45.801237],[13.538621,45.801171],[13.53867,45.801078],[13.538726,45.801001],[13.538831,45.800902],[13.538955,45.800788],[13.539119,45.800657],[13.539262,45.800528],[13.539402,45.80039],[13.539649,45.800164],[13.540127,45.799772],[13.540503,45.799466],[13.5407,45.799305],[13.540708,45.799251],[13.540657,45.799181],[13.540552,45.7991],[13.540461,45.799036],[13.540561,45.798941],[13.540758,45.798787],[13.540872,45.79874],[13.541032,45.798705],[13.541111,45.79871],[13.541286,45.798759],[13.541403,45.798806],[13.541497,45.798874],[13.541546,45.79893],[13.541581,45.799026],[13.541465,45.799165],[13.54129,45.799348],[13.541106,45.799516],[13.540908,45.799687],[13.540637,45.799919],[13.540437,45.800078],[13.540331,45.80016],[13.54017,45.800255],[13.540031,45.800295],[13.539825,45.800337],[13.5397,45.800356],[13.539554,45.800396],[13.539411,45.800476],[13.539248,45.800589],[13.539111,45.800707],[13.539013,45.800785],[13.538816,45.800969],[13.538745,45.801043],[13.538664,45.801165],[13.538614,45.801232],[13.53856,45.801288],[13.538415,45.8014],[13.538108,45.801658],[13.537992,45.80175],[13.537872,45.801847],[13.537596,45.802074],[13.537293,45.802306],[13.536924,45.802554],[13.536582,45.802769],[13.536266,45.802936],[13.535984,45.803074],[13.535666,45.80317],[13.535451,45.803215],[13.5352,45.803236],[13.534857,45.803205],[13.534544,45.803226],[13.534202,45.803368],[13.53403,45.803438],[13.533606,45.803599],[13.533377,45.803658],[13.533136,45.803667],[13.533013,45.803664],[13.532862,45.80364],[13.532766,45.803597],[13.532661,45.803528],[13.532487,45.803423],[13.532379,45.803335],[13.532294,45.803262],[13.532162,45.803107],[13.532002,45.802869],[13.531855,45.802671],[13.531619,45.802363],[13.531589,45.80233],[13.531603,45.80229],[13.531671,45.802222],[13.531945,45.802006],[13.532395,45.80168],[13.532761,45.801409],[13.532997,45.801223],[13.533151,45.801144],[13.533239,45.801125],[13.533322,45.801127],[13.533438,45.801135],[13.533523,45.801112],[13.533614,45.801065],[13.533739,45.800969],[13.533915,45.80083],[13.534268,45.800561],[13.534588,45.800315],[13.534998,45.800003],[13.535434,45.799646],[13.535906,45.799246],[13.536395,45.798813],[13.537032,45.798228],[13.537173,45.798084],[13.537264,45.797961],[13.537589,45.797693],[13.537853,45.797448],[13.537887,45.79738],[13.537855,45.797319],[13.537745,45.797245],[13.537654,45.797177],[13.537527,45.797088],[13.537413,45.797013],[13.537317,45.796953],[13.53728,45.796907],[13.537212,45.796794],[13.537172,45.796698],[13.537155,45.796646],[13.537089,45.796482],[13.537037,45.796357],[13.536953,45.79619],[13.536925,45.796075],[13.536905,45.795993],[13.536896,45.795907],[13.536902,45.795823],[13.536956,45.795729],[13.537023,45.795666],[13.53718,45.795537],[13.537384,45.795383],[13.537643,45.795181],[13.537727,45.795101],[13.53773,45.795],[13.537658,45.794903],[13.537452,45.794757],[13.537261,45.794654],[13.537012,45.794518],[13.536849,45.79446],[13.536624,45.794397],[13.536469,45.794365],[13.536429,45.794307],[13.536429,45.794235],[13.536499,45.794184],[13.537667,45.793307],[13.537732,45.793235],[13.537723,45.793191],[13.537757,45.793118],[13.537816,45.793068],[13.537935,45.793044],[13.538096,45.793019],[13.538263,45.792943],[13.538451,45.792827],[13.538704,45.792684],[13.538961,45.792479],[13.539087,45.792355],[13.53928,45.792166],[13.539456,45.792022],[13.539682,45.791852],[13.539827,45.791768],[13.539951,45.791744],[13.540223,45.791815],[13.540373,45.791921],[13.540573,45.792058],[13.540676,45.792166],[13.540701,45.792246],[13.540657,45.792317],[13.540565,45.792368],[13.540621,45.792434],[13.540823,45.79255],[13.541122,45.792711],[13.541371,45.792852],[13.541571,45.792971],[13.541879,45.793118],[13.541974,45.793145],[13.542086,45.793166],[13.542162,45.793193],[13.542212,45.793233],[13.542233,45.793278],[13.542234,45.793343],[13.542154,45.793398],[13.542061,45.793421],[13.542006,45.793408],[13.541937,45.793361],[13.541929,45.793329],[13.541809,45.79319],[13.541734,45.793132],[13.541651,45.793074],[13.540998,45.792704],[13.540679,45.792533],[13.540541,45.792432],[13.540447,45.792364],[13.540372,45.792291],[13.540204,45.792178],[13.539975,45.792027],[13.539887,45.791974],[13.539792,45.791972],[13.539724,45.791995],[13.53955,45.792118],[13.53938,45.792235],[13.539281,45.792297],[13.539191,45.792307],[13.539105,45.792275],[13.538709,45.791969],[13.538501,45.791824],[13.538344,45.791698],[13.538131,45.791589],[13.537724,45.791394],[13.537017,45.79105],[13.536815,45.790934],[13.53665,45.790778],[13.536579,45.790692],[13.536534,45.790565],[13.536366,45.790207],[13.536347,45.790157],[13.536243,45.790112],[13.536132,45.790113],[13.535166,45.790402]]
+  },
+  rive: {
+    id:'rive', label:'Rive', color:'#ed7c12',
+    coords:[[13.535155,45.790375],[13.536126,45.790082],[13.536268,45.789942],[13.536411,45.789952],[13.536493,45.790018],[13.536463,45.790121],[13.536419,45.790206],[13.536687,45.790715],[13.536941,45.790966],[13.538402,45.791691],[13.538566,45.791793],[13.539067,45.792177],[13.539217,45.792252],[13.539343,45.792238],[13.539523,45.792104],[13.539727,45.791936],[13.539897,45.791902],[13.540089,45.791934],[13.540476,45.792187],[13.540668,45.792452],[13.54076,45.792542],[13.540967,45.792646],[13.541525,45.79296],[13.541741,45.793085],[13.541929,45.793166],[13.542147,45.793216],[13.542275,45.793319],[13.542392,45.793397],[13.542617,45.793524],[13.54302,45.793753],[13.543117,45.793781],[13.543232,45.793768],[13.54332,45.79371],[13.543719,45.793432],[13.544028,45.793185],[13.544289,45.79296],[13.544787,45.792554],[13.544992,45.792396],[13.546238,45.791408],[13.546593,45.791172],[13.546934,45.790865],[13.547229,45.790533],[13.547426,45.790231],[13.547423,45.790089],[13.547176,45.789921],[13.546967,45.789818],[13.546746,45.789766],[13.546455,45.789978],[13.546074,45.790303],[13.545829,45.790381],[13.545559,45.790453],[13.545327,45.790587],[13.545011,45.790853],[13.544468,45.791281],[13.543935,45.791739],[13.543542,45.79206],[13.542513,45.792888],[13.542244,45.793115],[13.542204,45.793199],[13.542218,45.793339],[13.542088,45.793415],[13.541963,45.793383],[13.541857,45.793263],[13.541668,45.793103],[13.541382,45.792924],[13.540809,45.792603],[13.540574,45.792449],[13.54039,45.792292],[13.540159,45.792131],[13.539881,45.791955],[13.539791,45.791969],[13.539469,45.792159],[13.53926,45.792304],[13.539138,45.792314],[13.538995,45.792202],[13.538675,45.791952],[13.538471,45.791791],[13.538329,45.791682],[13.537911,45.791482],[13.537622,45.791342],[13.537291,45.791186],[13.536993,45.791032],[13.536776,45.790888],[13.536574,45.790665],[13.536366,45.790198],[13.536256,45.790124],[13.536134,45.790118],[13.535363,45.790323],[13.535172,45.790377]]
+  },
+  magazzini: {
+    id:'magazzini', label:'Mag. Generale e Mag. 51', color:'#ba3be8',
+    coords:[[13.535165,45.790384],[13.535732,45.7902],[13.536122,45.790095],[13.536207,45.790005],[13.536312,45.789949],[13.5364,45.789963],[13.536468,45.790025],[13.53646,45.790131],[13.536434,45.790194],[13.536538,45.790409],[13.536689,45.790712],[13.536859,45.790891],[13.537041,45.791019],[13.537367,45.791179],[13.538031,45.791489],[13.538526,45.791758],[13.5389,45.792021],[13.539126,45.792228],[13.539257,45.792267],[13.539368,45.792223],[13.539496,45.792115],[13.539719,45.791947],[13.539868,45.791898],[13.540008,45.791904],[13.540113,45.791948],[13.540492,45.792198],[13.540601,45.79235],[13.540753,45.792528],[13.541667,45.793046],[13.541915,45.793132],[13.542137,45.793192],[13.542236,45.793272],[13.542305,45.793356],[13.543045,45.793775],[13.543186,45.793785],[13.543315,45.79384],[13.543346,45.793901],[13.543318,45.793979],[13.543185,45.794043],[13.543077,45.794],[13.542963,45.793954],[13.542732,45.794093],[13.541604,45.794766],[13.541395,45.794844],[13.541215,45.794908],[13.540213,45.795719],[13.540206,45.795807],[13.540409,45.795962],[13.540659,45.796204],[13.54092,45.796293],[13.541065,45.796391],[13.541364,45.796573],[13.54143,45.79659],[13.541563,45.796495],[13.541893,45.796218],[13.54253,45.79572],[13.542575,45.795664],[13.54261,45.795582],[13.542603,45.795512],[13.542492,45.795412],[13.541858,45.795026],[13.541591,45.794844],[13.541512,45.794786],[13.541299,45.794852],[13.541167,45.794877],[13.541028,45.794806],[13.540834,45.794672],[13.540733,45.794607],[13.540725,45.794571],[13.540778,45.794498],[13.540884,45.794413],[13.541364,45.794051],[13.541923,45.793612],[13.541978,45.793525],[13.542011,45.79344],[13.54196,45.793352],[13.541877,45.79327],[13.541786,45.793174],[13.541489,45.792974],[13.541002,45.792708],[13.540719,45.792565],[13.540582,45.792476],[13.540382,45.792286],[13.54019,45.792157],[13.539969,45.792011],[13.539872,45.79197],[13.539789,45.791969],[13.539654,45.792036],[13.539272,45.792313],[13.539134,45.792298],[13.538983,45.792195],[13.538578,45.791859],[13.538458,45.791764],[13.538369,45.791709],[13.538114,45.791572],[13.537709,45.791373],[13.537011,45.791052],[13.536889,45.790986],[13.536811,45.790921],[13.536593,45.79069],[13.536362,45.790187],[13.536308,45.790152],[13.536184,45.790101],[13.536089,45.790119],[13.535152,45.79038]]
+  },
+  parco: {
+    id:'parco', label:'Parco Lamiere', color:'#1cc4e2',
+    coords:[[13.535183,45.790385],[13.536115,45.790079],[13.536258,45.789948],[13.536402,45.78994],[13.536493,45.790053],[13.536407,45.790208],[13.536663,45.790697],[13.53696,45.790982],[13.538398,45.791687],[13.539007,45.792131],[13.539227,45.792247],[13.539323,45.792233],[13.539622,45.792014],[13.539801,45.791902],[13.54003,45.791906],[13.540274,45.792049],[13.54046,45.792183],[13.540606,45.792369],[13.540755,45.792529],[13.540753,45.79262],[13.540488,45.792863],[13.539954,45.793332],[13.539547,45.793712],[13.53932,45.793909],[13.538743,45.794378],[13.537925,45.794996],[13.537081,45.795636],[13.536952,45.795773],[13.536958,45.795992],[13.537037,45.796281],[13.537271,45.796451],[13.537628,45.796629],[13.538001,45.796848],[13.538219,45.796975],[13.538289,45.797036],[13.538219,45.797111],[13.53804,45.797294],[13.537763,45.797577],[13.537263,45.798022],[13.537014,45.798312],[13.53682,45.798485],[13.536555,45.798696],[13.536322,45.798897],[13.536126,45.799107],[13.535884,45.799345],[13.535522,45.799643],[13.534579,45.800378],[13.533772,45.801003],[13.533613,45.801132],[13.533583,45.801221],[13.53363,45.801288],[13.533831,45.801414],[13.53429,45.801698],[13.534749,45.801976],[13.534866,45.802045],[13.534903,45.802095],[13.534879,45.80215],[13.53482,45.802217],[13.534462,45.802503],[13.534181,45.802716],[13.534137,45.802772],[13.534409,45.80297],[13.534504,45.803073],[13.534529,45.803134],[13.534462,45.803233],[13.534214,45.803342],[13.533835,45.803493],[13.533485,45.803627],[13.533346,45.803573],[13.533105,45.80341],[13.532524,45.803044],[13.532018,45.802736],[13.531835,45.802575],[13.531698,45.802409],[13.531632,45.802336],[13.531767,45.802179],[13.532085,45.801937],[13.533041,45.801218],[13.533176,45.801149],[13.533435,45.801151],[13.533569,45.801113],[13.53393,45.800843],[13.535222,45.799849],[13.535768,45.799391],[13.536129,45.799059],[13.536822,45.798416],[13.537068,45.79818],[13.537232,45.797984],[13.537719,45.797565],[13.537846,45.797456],[13.537866,45.797357],[13.53778,45.797248],[13.537561,45.797106],[13.53734,45.796961],[13.537242,45.796822],[13.537144,45.796595],[13.537082,45.796417],[13.536984,45.79621],[13.536926,45.796019],[13.536919,45.795875],[13.536924,45.795776],[13.53702,45.79565],[13.537594,45.795215],[13.537712,45.795118],[13.537726,45.795007],[13.537586,45.79485],[13.537238,45.794648],[13.536916,45.794485],[13.536724,45.794433],[13.536484,45.794364],[13.536445,45.794253],[13.536632,45.794108],[13.537023,45.793801],[13.53772,45.793271],[13.537747,45.793196],[13.537808,45.793093],[13.538059,45.793043],[13.538233,45.792974],[13.53865,45.792731],[13.538931,45.792532],[13.539274,45.792194],[13.539511,45.79199],[13.539732,45.791829],[13.539848,45.791768],[13.540044,45.791787],[13.540231,45.791874],[13.540551,45.792081],[13.540621,45.792153],[13.540672,45.792431],[13.540915,45.792577],[13.541184,45.792748],[13.541357,45.79286],[13.541706,45.793071],[13.541907,45.793181],[13.542146,45.793211],[13.542206,45.79332],[13.542136,45.793383],[13.542003,45.793387],[13.54192,45.793306],[13.540566,45.792424],[13.540485,45.792347],[13.540378,45.792291],[13.540212,45.792192],[13.539974,45.792044],[13.539888,45.791996],[13.539794,45.791975],[13.539637,45.792045],[13.539465,45.792166],[13.539295,45.792279],[13.539198,45.792322],[13.539082,45.792274],[13.538883,45.792124],[13.538586,45.791862],[13.538346,45.791698],[13.538003,45.791519],[13.537195,45.791139],[13.536908,45.790992],[13.536765,45.790884],[13.536586,45.790692],[13.536365,45.790197],[13.536348,45.790165],[13.536269,45.790134],[13.536192,45.790119],[13.536098,45.790119],[13.535149,45.790369]]
+  }
+};
 
-const SPLITS = {riva:44, mag51:53, parco:68};
-const DESTS=[
-  {id:"riva_e",label:"Riva E",lon:13.5438833,lat:45.7917064,routes:["riva"]},
-  {id:"riva_d",label:"Riva D",lon:13.5451702,lat:45.7925032,routes:["riva"]},
-  {id:"mag_gen",label:"Mag. Generale",lon:13.5424533,lat:45.7936233,routes:["riva","mag51"]},
-  {id:"mag_51",label:"Mag. 51",lon:13.5406306,lat:45.7961890,routes:["mag51"]},
-  {id:"tettoia",label:"Tettoia Sottoas.",lon:13.5330823,lat:45.8033946,routes:["parco"]},
-  {id:"parco_travi",label:"P.Lamiere travi",lon:13.5330074,lat:45.8028634,routes:["parco"]},
-  {id:"parco_pra",label:"P.Lamiere PRA",lon:13.5334014,lat:45.8025762,routes:["parco"]},
-  {id:"parco_travi2",label:"P.Lamiere travi2",lon:13.5330706,lat:45.8015713,routes:["parco"]}
+// Destinations and their route mappings
+const DESTS = [
+  {id:"riva_e", label:"Riva E", lon:13.5439540, lat:45.7917220, routes:["rive"]},
+  {id:"riva_d", label:"Riva D", lon:13.5449890, lat:45.7923990, routes:["rive"]},
+  {id:"mag_gen", label:"Mag. Generale", lon:13.5425980, lat:45.7935210, routes:["magazzini"]},
+  {id:"mag_51", label:"Mag. 51", lon:13.5406310, lat:45.7961890, routes:["magazzini"]},
+  {id:"bacino", label:"Bacino", lon:13.5424220, lat:45.7974230, routes:["bacino"]},
+  {id:"capannette", label:"Ex Capannette Pitt.", lon:13.5397150, lat:45.8001280, routes:["capannette"]},
+  {id:"tettoia", label:"Tettoia Sottoas.", lon:13.5330820, lat:45.8033950, routes:["bacino","capannette"]},
+  {id:"parco_travi", label:"P.Lamiere travi", lon:13.5319490, lat:45.8020400, routes:["parco","capannette"]},
+  {id:"parco_pra", label:"P.Lamiere PRA", lon:13.5341390, lat:45.8027690, routes:["parco","bacino"]},
+  {id:"parco_travi2", label:"P.Lamiere travi2", lon:13.5327190, lat:45.8014600, routes:["parco","capannette"]}
 ];
-const PESA_IN={lon:13.5404377,lat:45.7921712}, PESA_OUT={lon:13.5403606,lat:45.7922759};
+
+const PESA_IN = {lon:13.540438, lat:45.792171};
+const PESA_OUT = {lon:13.540361, lat:45.792276};
+
+const POIs = [
+  {label:'PESA ENTRATA', lon:13.540438, lat:45.792171},
+  {label:'PESA USCITA', lon:13.540361, lat:45.792276},
+  {label:'Ingresso', lon:13.535125, lat:45.790354},
+  {label:'Riva E', lon:13.543954, lat:45.791722},
+  {label:'Riva D', lon:13.544989, lat:45.792399},
+  {label:'Mag. Generale', lon:13.542598, lat:45.793521},
+  {label:'Mag. 51', lon:13.540631, lat:45.796189},
+  {label:'Bacino', lon:13.542422, lat:45.797423},
+  {label:'Ex Capannette Pitt.', lon:13.539715, lat:45.800128},
+  {label:'Tettoia Sottoas.', lon:13.533082, lat:45.803395},
+  {label:'P.Lamiere travi', lon:13.531949, lat:45.80204},
+  {label:'P.Lamiere PRA', lon:13.534139, lat:45.802769},
+  {label:'P.Lamiere travi2', lon:13.532719, lat:45.80146}
+];
 
 // ═══════════════════════════════════════════════════════════════════
-// PATH MATH — 15 km/h = 250 m/min
+// PATH MATH
 // ═══════════════════════════════════════════════════════════════════
 const COS_LAT = Math.cos(45.795 * Math.PI / 180);
 const M_PER_DEG_LON = 111320 * COS_LAT;
 const M_PER_DEG_LAT = 111320;
 const TRUCK_SPEED_M_PER_MIN = 250;
-const QUEUE_SPACING_M = 14; // meters between queued trucks
+const QUEUE_SPACING_M = 14;
 
 function pathLenM(pts) {
   let l=0;
@@ -162,14 +358,11 @@ function posAtLL(pts, prog) {
     const segM=Math.sqrt(dx*dx+dy*dy);
     if(target<=segM||i===pts.length-1){
       const t=segM>0?Math.min(target/segM,1):0;
-      const lon=pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t;
-      const lat=pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t;
-      const angle=Math.atan2(dy, dx)*180/Math.PI;
-      return {lon, lat, angle: -angle};
+      return {lon:pts[i-1][0]+(pts[i][0]-pts[i-1][0])*t, lat:pts[i-1][1]+(pts[i][1]-pts[i-1][1])*t, angle:-Math.atan2(dy,dx)*180/Math.PI};
     }
     target-=segM;
   }
-  return {lon:pts[pts.length-1][0], lat:pts[pts.length-1][1], angle:0};
+  return {lon:pts[pts.length-1][0],lat:pts[pts.length-1][1],angle:0};
 }
 
 function progOfLL(pts, lon, lat) {
@@ -196,18 +389,35 @@ function speedForPath(pts) { return TRUCK_SPEED_M_PER_MIN / pathLenM(pts); }
 // ═══════════════════════════════════════════════════════════════════
 // SIMULATION STATE
 // ═══════════════════════════════════════════════════════════════════
-let simTime = 420;
+let simTime = 420; // 07:00
 let simRunning = false;
+let simFinished = false;
 let rafId = null;
 let lastFrameTime = null;
 let timeScale = 1;
 let vehicles = [];
 let routeData = {};
 let stats = {qIn:0,qOut:0,maxIn:0,maxOut:0,served:0};
-let destDist = {riva_e:15,riva_d:15,mag_gen:15,mag_51:15,tettoia:10,parco_travi:10,parco_pra:10,parco_travi2:10};
-let map, vehicleMarkers = [], poiBadges = [];
+let destDist = {riva_e:12,riva_d:12,mag_gen:10,mag_51:10,bacino:10,capannette:10,tettoia:10,parco_travi:10,parco_pra:8,parco_travi2:8};
+let map, routeMapInst, vehicleMarkers=[], poiBadges=[];
 
-const TIME_SCALES = [1, 2, 5, 10, 30, 60, 120, 300, 600];
+// Telemetry for reports
+let telemetry = {
+  queueInHistory:[],    // [{t, val}]
+  queueOutHistory:[],
+  throughputHistory:[],  // trucks completed per 30-min window
+  travelTimes:{},        // {destId: [minutes]}
+  waitTimesIn:[],        // minutes waited in entry queue
+  waitTimesOut:[],       // minutes waited in exit queue
+  truckLog:[],           // [{id, dest, arrival, pesaInStart, pesaInEnd, atDest, unloadEnd, pesaOutStart, pesaOutEnd, exit}]
+  peakQueueIn:0,
+  peakQueueOut:0,
+  simEndTime:0,
+  hourlyArrivals:{},
+  congestionEvents:[]    // times when queue > 5
+};
+
+const TIME_SCALES = [1,2,5,10,30,60,120,300,600];
 const TIME_LABELS = ['1x','2x','5x','10x','30x','1min/s','2min/s','5min/s','10min/s'];
 
 function setTimeScale(idx) {
@@ -223,51 +433,89 @@ function getCfg() {
   };
 }
 
+function fmtTime(mins) {
+  const h=Math.floor(mins/60), m=Math.floor(mins%60);
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════
+let activeTab = 0;
+function switchTab(idx) {
+  activeTab = idx;
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  document.querySelectorAll('.tab-content').forEach((t,i)=>t.classList.toggle('active',i===idx));
+  if(idx===1 && routeMapInst) { setTimeout(()=>routeMapInst.invalidateSize(),100); }
+  if(idx===2) updateMonitor();
+  if(idx===3 && simFinished) generateReport();
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════════
 window.onload = function() {
   initMap();
   initRoutes();
+  initRouteViewer();
   buildDestSliders();
   resetSim();
 };
 
 function initMap() {
   map = L.map('map',{zoomControl:true}).setView([45.7968,13.5388],15);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{
-    maxZoom:19, attribution:'Tiles &copy; Esri'
-  }).addTo(map);
-  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{
-    maxZoom:19, opacity:0.4
-  }).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,attribution:'Esri'}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:0.4}).addTo(map);
 
-  const colors = {riva:'#ef4444',mag51:'#a855f7',parco:'#22c55e'};
-  for(const[k,raw]of Object.entries({riva:R_RIVA,mag51:R_MAG51,parco:R_PARCO})){
-    const ll = raw.map(([lo,la])=>[la,lo]);
-    L.polyline(ll,{color:colors[k],weight:10,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(map);
-    L.polyline(ll,{color:colors[k],weight:4,opacity:0.9,lineCap:'round',lineJoin:'round'}).addTo(map);
+  // Draw all routes
+  for(const[k,r] of Object.entries(ROUTES_RAW)){
+    const ll=r.coords.map(([lo,la])=>[la,lo]);
+    L.polyline(ll,{color:r.color,weight:10,opacity:0.2,lineCap:'round',lineJoin:'round'}).addTo(map);
+    L.polyline(ll,{color:r.color,weight:3.5,opacity:0.85,lineCap:'round',lineJoin:'round'}).addTo(map);
   }
 
-  const pesaHtml=s=>`<div style="background:rgba(0,0,0,0.8);border:2px solid #eab308;border-radius:4px;padding:1px 5px;font:bold 9px monospace;color:#eab308;white-space:nowrap">${s}</div>`;
+  // PESA markers
+  const pesaHtml=s=>`<div style="background:rgba(0,0,0,0.85);border:2px solid #eab308;border-radius:4px;padding:1px 5px;font:bold 9px monospace;color:#eab308;white-space:nowrap">${s}</div>`;
   L.marker([PESA_IN.lat,PESA_IN.lon],{icon:L.divIcon({className:'',html:pesaHtml('PESA ▶'),iconSize:[55,22],iconAnchor:[27,11]})}).addTo(map);
   L.marker([PESA_OUT.lat,PESA_OUT.lon],{icon:L.divIcon({className:'',html:pesaHtml('◀ PESA'),iconSize:[55,22],iconAnchor:[27,11]})}).addTo(map);
 
+  // Entry
   L.marker([45.7903536,13.5351252],{icon:L.divIcon({className:'',html:`<div style="background:#052e16;border:2px solid #22c55e;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font:bold 8px monospace;color:#22c55e">IN</div>`,iconSize:[24,24],iconAnchor:[12,12]})}).addTo(map);
 
+  // Destination markers
   for(const d of DESTS){
-    L.marker([d.lat,d.lon],{icon:L.divIcon({className:'',html:`<div style="position:relative"><div style="width:12px;height:12px;background:rgba(0,0,0,0.6);border:2px solid #ef4444;border-radius:50%"></div><div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font:bold 8px monospace;color:#fff;text-shadow:0 0 4px #000,0 0 4px #000;white-space:nowrap">${d.label}</div></div>`,iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);
+    L.marker([d.lat,d.lon],{icon:L.divIcon({className:'',html:`<div style="position:relative"><div style="width:12px;height:12px;background:rgba(0,0,0,0.6);border:2px solid var(--red);border-radius:50%"></div><div style="position:absolute;top:-16px;left:50%;transform:translateX(-50%);font:bold 8px monospace;color:#fff;text-shadow:0 0 4px #000,0 0 4px #000;white-space:nowrap">${d.label}</div></div>`,iconSize:[14,14],iconAnchor:[7,7]})}).addTo(map);
   }
 }
 
 function initRoutes() {
-  for(const[k,raw]of Object.entries({riva:R_RIVA,mag51:R_MAG51,parco:R_PARCO})){
-    const si = SPLITS[k];
-    const out=raw.slice(0,si), inn=raw.slice(si);
+  for(const[k,r] of Object.entries(ROUTES_RAW)){
+    const coords=r.coords;
+    // Find split: first half goes OUT (entry→pesa→dest), second half comes back IN (dest→pesa→exit)
+    // PESA_IN is on the outbound leg, PESA_OUT on the return
+    let piIdx=0, piDist=1e12, poIdx=0, poDist=1e12;
+    for(let i=0;i<coords.length;i++){
+      const dx=(coords[i][0]-PESA_IN.lon)*M_PER_DEG_LON;
+      const dy=(coords[i][1]-PESA_IN.lat)*M_PER_DEG_LAT;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<piDist){piDist=d;piIdx=i;}
+    }
+    for(let i=0;i<coords.length;i++){
+      const dx=(coords[i][0]-PESA_OUT.lon)*M_PER_DEG_LON;
+      const dy=(coords[i][1]-PESA_OUT.lat)*M_PER_DEG_LAT;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<poDist){poDist=d;poIdx=i;}
+    }
+    // Out = start to midpoint, In = midpoint to end
+    const midIdx = Math.round((piIdx + poIdx)/2 + (poIdx-piIdx)/2);
+    const splitIdx = Math.round(coords.length * 0.5);
+    const out = coords.slice(0, splitIdx);
+    const inn = coords.slice(splitIdx);
     const outLen = pathLenM(out);
     const innLen = pathLenM(inn);
+
     routeData[k] = {
-      out, inn, full:raw, outLen, innLen,
+      out, inn, full:coords, outLen, innLen,
       pesaInProg: progOfLL(out, PESA_IN.lon, PESA_IN.lat),
       pesaOutProg: progOfLL(inn, PESA_OUT.lon, PESA_OUT.lat),
       spdOut: speedForPath(out),
@@ -278,21 +526,44 @@ function initRoutes() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// DESTINATION SLIDERS
+// ═══════════════════════════════════════════════════════════════════
 function buildDestSliders() {
   const el = document.getElementById('destSliders');
   const tot = Object.values(destDist).reduce((s,n)=>s+n,0)||1;
+  const trucksPerDay = +document.getElementById('s_trucks').value;
   el.innerHTML = DESTS.map(d=>{
     const pct = Math.round((destDist[d.id]||0)/tot*100);
-    return `<div class="param-row dest-row"><div class="label"><span>${d.label}</span><span class="dest-pct" id="dp_${d.id}">${pct}%</span></div><input type="range" min="0" max="50" value="${destDist[d.id]||0}" oninput="updateDest('${d.id}',+this.value)"></div>`;
+    const nTrucks = Math.round((destDist[d.id]||0)/tot*trucksPerDay);
+    return `<div class="param-row dest-row"><div class="label"><span>${d.label}</span><span class="dest-pct" id="dp_${d.id}">${pct}% (${nTrucks})</span></div><input type="range" min="0" max="50" value="${destDist[d.id]||0}" oninput="updateDest('${d.id}',+this.value)"></div>`;
   }).join('');
 }
 
 function updateDest(id, val) {
   destDist[id] = val;
   const tot = Object.values(destDist).reduce((s,n)=>s+n,0)||1;
+  const trucksPerDay = +document.getElementById('s_trucks').value;
   DESTS.forEach(d=>{
     const el = document.getElementById('dp_'+d.id);
-    if(el) el.textContent = Math.round((destDist[d.id]||0)/tot*100)+'%';
+    if(el) {
+      const pct = Math.round((destDist[d.id]||0)/tot*100);
+      const nTrucks = Math.round((destDist[d.id]||0)/tot*trucksPerDay);
+      el.textContent = pct+'% ('+nTrucks+')';
+    }
+  });
+}
+
+function refreshDestCounts() {
+  const tot = Object.values(destDist).reduce((s,n)=>s+n,0)||1;
+  const trucksPerDay = +document.getElementById('s_trucks').value;
+  DESTS.forEach(d=>{
+    const el = document.getElementById('dp_'+d.id);
+    if(el) {
+      const pct = Math.round((destDist[d.id]||0)/tot*100);
+      const nTrucks = Math.round((destDist[d.id]||0)/tot*trucksPerDay);
+      el.textContent = pct+'% ('+nTrucks+')';
+    }
   });
 }
 
@@ -311,19 +582,22 @@ function generateVehicles() {
     const rk = dest.routes[Math.floor(Math.random()*dest.routes.length)];
     v.push({
       id:i, rk, dest:dest.id, destLabel:dest.label,
-      arrival: 420 + Math.random()*540,
-      state:'wait', prog:0, timer:0, queueIdx:0
+      arrival: 420 + Math.random()*540, // 07:00-16:00
+      state:'wait', prog:0, timer:0, queueIdx:0,
+      // Telemetry timestamps
+      ts_pesaInStart:0, ts_pesaInEnd:0, ts_atDest:0, ts_unloadEnd:0,
+      ts_pesaOutStart:0, ts_pesaOutEnd:0, ts_exit:0,
+      ts_qInStart:0, ts_qOutStart:0
     });
   }
-  return v;
+  return v.sort((a,b)=>a.arrival-b.arrival);
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// SIMULATION — continuous with fractional dt
+// SIMULATION CORE — runs until ALL trucks exit
 // ═══════════════════════════════════════════════════════════════════
 function simUpdate(dt) {
   simTime += dt;
-  if(simTime >= 1080) { stopSim(); simTime=1080; return; }
   const cfg = getCfg();
 
   for(const v of vehicles) {
@@ -336,33 +610,33 @@ function simUpdate(dt) {
         break;
       case 'toPesaIn':
         v.prog = Math.min(v.prog + r.spdOut * dt, r.pesaInProg);
-        if(v.prog >= r.pesaInProg - 0.0001) { v.prog=r.pesaInProg; v.state='qIn'; }
+        if(v.prog >= r.pesaInProg - 0.0001) { v.prog=r.pesaInProg; v.state='qIn'; v.ts_qInStart=simTime; }
         break;
       case 'qIn': break;
       case 'sIn':
         v.timer -= dt;
-        if(v.timer<=0){v.state='toDest';v.prog=r.pesaInProg;}
+        if(v.timer<=0){v.state='toDest';v.prog=r.pesaInProg;v.ts_pesaInEnd=simTime;}
         break;
       case 'toDest':
         v.prog = Math.min(1, v.prog + r.spdOut * dt);
-        if(v.prog>=1){v.state='unload';v.timer=cfg.unloadTime;}
+        if(v.prog>=1){v.state='unload';v.timer=cfg.unloadTime+(Math.random()-0.5)*cfg.unloadTime*0.3;v.ts_atDest=simTime;}
         break;
       case 'unload':
         v.timer -= dt;
-        if(v.timer<=0){v.state='toPesaOut';v.prog=0;}
+        if(v.timer<=0){v.state='toPesaOut';v.prog=0;v.ts_unloadEnd=simTime;}
         break;
       case 'toPesaOut':
         v.prog = Math.min(v.prog + r.spdIn * dt, r.pesaOutProg);
-        if(v.prog >= r.pesaOutProg - 0.0001){v.prog=r.pesaOutProg;v.state='qOut';}
+        if(v.prog >= r.pesaOutProg - 0.0001){v.prog=r.pesaOutProg;v.state='qOut';v.ts_qOutStart=simTime;}
         break;
       case 'qOut': break;
       case 'sOut':
         v.timer -= dt;
-        if(v.timer<=0){v.state='toExit';v.prog=r.pesaOutProg;}
+        if(v.timer<=0){v.state='toExit';v.prog=r.pesaOutProg;v.ts_pesaOutEnd=simTime;}
         break;
       case 'toExit':
         v.prog = Math.min(1, v.prog + r.spdIn * dt);
-        if(v.prog>=1) v.state='done';
+        if(v.prog>=1){v.state='done';v.ts_exit=simTime;}
         break;
     }
   }
@@ -372,13 +646,15 @@ function simUpdate(dt) {
     const q = vehicles.filter(v=>v.state===qState).sort((a,b)=>a.arrival-b.arrival);
     if(!vehicles.find(v=>v.state===sState) && q.length>0) {
       q[0].state = sState;
-      q[0].timer = cfg.pesaTime;
+      q[0].timer = cfg.pesaTime + (Math.random()-0.5)*2;
+      if(sState==='sIn') q[0].ts_pesaInStart = simTime;
+      if(sState==='sOut') q[0].ts_pesaOutStart = simTime;
     }
   }
   serveQueue('qIn','sIn');
   serveQueue('qOut','sOut');
 
-  // Assign queue positions for visual stacking
+  // Queue visual positions
   const qInV = vehicles.filter(v=>v.state==='qIn').sort((a,b)=>a.arrival-b.arrival);
   qInV.forEach((v,i) => { v.queueIdx = i; });
   const qOutV = vehicles.filter(v=>v.state==='qOut').sort((a,b)=>a.arrival-b.arrival);
@@ -391,10 +667,63 @@ function simUpdate(dt) {
   stats.maxIn=Math.max(stats.maxIn,qI);
   stats.maxOut=Math.max(stats.maxOut,qO);
   stats.served=vehicles.filter(v=>v.state==='done').length;
+
+  // Telemetry sampling (every ~2 sim minutes)
+  if(!this._lastSample || simTime - this._lastSample > 2) {
+    this._lastSample = simTime;
+    telemetry.queueInHistory.push({t:simTime, val:qI});
+    telemetry.queueOutHistory.push({t:simTime, val:qO});
+    if(qI>5) telemetry.congestionEvents.push({t:simTime, type:'in', val:qI});
+    if(qO>5) telemetry.congestionEvents.push({t:simTime, type:'out', val:qO});
+  }
+
+  // Check if simulation complete (all trucks done)
+  const allDone = vehicles.every(v=>v.state==='done');
+  if(allDone && vehicles.length>0) {
+    simFinished = true;
+    telemetry.simEndTime = simTime;
+    finalizeTelemetry();
+    stopSim();
+    document.getElementById('simStatus').textContent = 'COMPLETATA';
+    document.getElementById('simStatus').style.background = 'rgba(34,197,94,0.15)';
+    document.getElementById('simStatus').style.color = 'var(--green)';
+    generateReport();
+    return;
+  }
+}
+
+function finalizeTelemetry() {
+  const cfg = getCfg();
+  telemetry.peakQueueIn = stats.maxIn;
+  telemetry.peakQueueOut = stats.maxOut;
+
+  // Compute travel times, wait times, truck log
+  for(const v of vehicles) {
+    const totalTime = v.ts_exit - v.arrival;
+    const waitIn = v.ts_pesaInStart - v.ts_qInStart;
+    const waitOut = v.ts_pesaOutStart - v.ts_qOutStart;
+
+    if(!telemetry.travelTimes[v.dest]) telemetry.travelTimes[v.dest]= [];
+    telemetry.travelTimes[v.dest].push(totalTime);
+    telemetry.waitTimesIn.push(waitIn);
+    telemetry.waitTimesOut.push(waitOut);
+
+    const hh = Math.floor(v.arrival/60);
+    telemetry.hourlyArrivals[hh] = (telemetry.hourlyArrivals[hh]||0)+1;
+
+    telemetry.truckLog.push({
+      id:v.id, dest:v.destLabel, route:v.rk,
+      arrival:v.arrival, pesaInStart:v.ts_pesaInStart, pesaInEnd:v.ts_pesaInEnd,
+      atDest:v.ts_atDest, unloadEnd:v.ts_unloadEnd,
+      pesaOutStart:v.ts_pesaOutStart, pesaOutEnd:v.ts_pesaOutEnd,
+      exit:v.ts_exit, totalTime: v.ts_exit - v.arrival,
+      waitIn, waitOut
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// MAP MARKER UPDATES
+// MAP MARKERS
 // ═══════════════════════════════════════════════════════════════════
 function updateMapMarkers() {
   vehicleMarkers.forEach(m=>map.removeLayer(m));
@@ -408,16 +737,13 @@ function updateMapMarkers() {
     if(!r) continue;
 
     let pos;
-
     if(v.state==='qIn') {
-      // Queued trucks space backwards from pesa along OUT route
-      const offset = (v.queueIdx + 1) * r.qSpacingOut;
+      const offset = (v.queueIdx+1)*r.qSpacingOut;
       pos = posAtLL(r.out, Math.max(0, r.pesaInProg - offset));
     } else if(v.state==='sIn') {
       pos = posAtLL(r.out, r.pesaInProg);
     } else if(v.state==='qOut') {
-      // Queued trucks space backwards from pesa-out along IN route
-      const offset = (v.queueIdx + 1) * r.qSpacingIn;
+      const offset = (v.queueIdx+1)*r.qSpacingIn;
       pos = posAtLL(r.inn, Math.max(0, r.pesaOutProg - offset));
     } else if(v.state==='sOut') {
       pos = posAtLL(r.inn, r.pesaOutProg);
@@ -430,36 +756,36 @@ function updateMapMarkers() {
       pos = posAtLL(r.inn, v.prog);
     } else continue;
 
-    const inQ = v.state==='qIn'||v.state==='qOut';
-    const srv = v.state==='sIn'||v.state==='sOut';
-    const unl = v.state==='unload';
-    const bg = inQ?'#fbbf24':srv?'#eab308':unl?'#888':'#ef4444';
-    const border = inQ||srv?'border:1.5px solid #fff;':'';
-    const opacity = unl?'opacity:0.5;':'';
-    const rot = v.state==='unload'?0:pos.angle;
+    const inQ=v.state==='qIn'||v.state==='qOut';
+    const srv=v.state==='sIn'||v.state==='sOut';
+    const unl=v.state==='unload';
+    const bg=inQ?'#fbbf24':srv?'#eab308':unl?'#888':'#ef4444';
+    const border=inQ||srv?'border:1.5px solid #fff;':'';
+    const opacity=unl?'opacity:0.5;':'';
+    const rot=v.state==='unload'?0:pos.angle;
 
-    const html = `<div style="transform:rotate(${rot}deg);${opacity}">
+    const html=`<div style="transform:rotate(${rot}deg);${opacity}">
       <div class="truck-body" style="background:${bg};${border}">
         <div class="truck-cabin"></div>
       </div>
     </div>`;
 
-    const icon = L.divIcon({className:'truck-icon',html,iconSize:[16,8],iconAnchor:[8,4]});
-    const marker = L.marker([pos.lat, pos.lon],{icon,interactive:false,pane:'markerPane'});
+    const icon=L.divIcon({className:'truck-icon',html,iconSize:[16,8],iconAnchor:[8,4]});
+    const marker=L.marker([pos.lat,pos.lon],{icon,interactive:false,pane:'markerPane'});
     marker.addTo(map);
     vehicleMarkers.push(marker);
   }
 
-  // PESA queue badges
+  // Queue badges
   if(stats.qIn>0){
     const col=stats.qIn>3?'#ef4444':'#fbbf24';
-    const icon=L.divIcon({className:'',html:`<div style="background:${col};border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font:bold 10px monospace;color:#fff;box-shadow:0 0 4px rgba(0,0,0,0.5)">${stats.qIn}</div>`,iconSize:[18,18],iconAnchor:[9,9]});
-    poiBadges.push(L.marker([PESA_IN.lat+0.00025,PESA_IN.lon+0.0004],{icon,interactive:false}).addTo(map));
+    const icon=L.divIcon({className:'',html:`<div style="background:${col};border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font:bold 10px monospace;color:#fff;box-shadow:0 0 6px rgba(0,0,0,0.5)">${stats.qIn}</div>`,iconSize:[20,20],iconAnchor:[10,10]});
+    poiBadges.push(L.marker([PESA_IN.lat+0.0003,PESA_IN.lon+0.0004],{icon,interactive:false}).addTo(map));
   }
   if(stats.qOut>0){
     const col=stats.qOut>3?'#ef4444':'#fbbf24';
-    const icon=L.divIcon({className:'',html:`<div style="background:${col};border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font:bold 10px monospace;color:#fff;box-shadow:0 0 4px rgba(0,0,0,0.5)">${stats.qOut}</div>`,iconSize:[18,18],iconAnchor:[9,9]});
-    poiBadges.push(L.marker([PESA_OUT.lat+0.00025,PESA_OUT.lon+0.0004],{icon,interactive:false}).addTo(map));
+    const icon=L.divIcon({className:'',html:`<div style="background:${col};border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font:bold 10px monospace;color:#fff;box-shadow:0 0 6px rgba(0,0,0,0.5)">${stats.qOut}</div>`,iconSize:[20,20],iconAnchor:[10,10]});
+    poiBadges.push(L.marker([PESA_OUT.lat+0.0003,PESA_OUT.lon+0.0004],{icon,interactive:false}).addTo(map));
   }
 }
 
@@ -467,10 +793,9 @@ function updateMapMarkers() {
 // UI UPDATES
 // ═══════════════════════════════════════════════════════════════════
 function updateUI() {
-  const h=Math.floor(simTime/60), m=Math.floor(simTime%60);
-  document.getElementById('clock').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  document.getElementById('clock').textContent = fmtTime(simTime);
 
-  const colQ=n=>n>4?'#ef4444':n>1?'#fbbf24':'#22c55e';
+  const colQ=n=>n>4?'var(--red)':n>1?'var(--yellow)':'var(--green)';
   document.getElementById('qIn').textContent=stats.qIn;
   document.getElementById('qIn').style.color=colQ(stats.qIn);
   document.getElementById('qOut').textContent=stats.qOut;
@@ -478,21 +803,29 @@ function updateUI() {
   document.getElementById('maxIn').textContent=stats.maxIn;
   document.getElementById('maxOut').textContent=stats.maxOut;
   document.getElementById('served').textContent=stats.served;
+  document.getElementById('totalTrucks').textContent=vehicles.length;
 
   const act=vehicles.filter(v=>v.state!=='wait'&&v.state!=='done').length;
+  const waiting=vehicles.filter(v=>v.state==='wait').length;
   document.getElementById('active').textContent=act;
+  document.getElementById('waiting').textContent=waiting;
 
   const cfg=getCfg();
-  const rho=(cfg.trucksPerDay*cfg.pesaTime*2/540).toFixed(2);
+  const arrivalRate = cfg.trucksPerDay / 540;
+  const serviceRate = 1 / cfg.pesaTime;
+  const rho = (arrivalRate / serviceRate).toFixed(2);
   const rhoEl=document.getElementById('rho');
   rhoEl.textContent=rho;
-  rhoEl.style.color=rho>0.8?'#ef4444':'#22c55e';
+  rhoEl.style.color=rho>0.8?'var(--red)':'var(--green)';
 
-  document.getElementById('footerStats').textContent=`${act} camion attivi · ${stats.served} serviti · ρ≈${rho}`;
+  document.getElementById('footerStats').textContent=`${act} attivi · ${stats.served}/${vehicles.length} completati · ρ≈${rho} · ${fmtTime(simTime)}`;
+
+  // Update monitor tab if active
+  if(activeTab===2) updateMonitor();
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RENDER LOOP — requestAnimationFrame, smooth continuous motion
+// RENDER LOOP
 // ═══════════════════════════════════════════════════════════════════
 function renderLoop(timestamp) {
   if(!simRunning) return;
@@ -505,9 +838,6 @@ function renderLoop(timestamp) {
 
   const realDeltaMs = Math.min(timestamp - lastFrameTime, 100);
   lastFrameTime = timestamp;
-
-  // realDeltaMs in real ms → sim minutes
-  // At 1x: 60000 real ms = 1 sim minute (real-time)
   const simDt = (realDeltaMs / 60000) * timeScale;
 
   if(simDt > 0) {
@@ -522,16 +852,17 @@ function renderLoop(timestamp) {
 // ═══════════════════════════════════════════════════════════════════
 // CONTROLS
 // ═══════════════════════════════════════════════════════════════════
-function toggleSim() {
-  if(simRunning) stopSim(); else startSim();
-}
+function toggleSim() { if(simRunning) stopSim(); else startSim(); }
 
 function startSim() {
-  if(simTime>=1080) resetSim();
+  if(simFinished) resetSim();
   simRunning=true;
   lastFrameTime=null;
   document.getElementById('btnPlay').textContent='⏸ Pausa';
   document.getElementById('btnPlay').classList.add('running');
+  document.getElementById('simStatus').textContent='IN CORSO';
+  document.getElementById('simStatus').style.background='rgba(239,68,68,0.15)';
+  document.getElementById('simStatus').style.color='var(--red)';
   rafId = requestAnimationFrame(renderLoop);
 }
 
@@ -541,21 +872,603 @@ function stopSim() {
   document.getElementById('btnPlay').classList.remove('running');
   if(rafId){cancelAnimationFrame(rafId);rafId=null;}
   lastFrameTime=null;
+  if(!simFinished){
+    document.getElementById('simStatus').textContent='PAUSA';
+    document.getElementById('simStatus').style.background='rgba(251,191,36,0.15)';
+    document.getElementById('simStatus').style.color='var(--yellow)';
+  }
 }
 
 function resetSim() {
   stopSim();
   simTime=420;
+  simFinished=false;
   vehicles=generateVehicles();
   stats={qIn:0,qOut:0,maxIn:0,maxOut:0,served:0};
+  telemetry={queueInHistory:[],queueOutHistory:[],throughputHistory:[],travelTimes:{},waitTimesIn:[],waitTimesOut:[],truckLog:[],peakQueueIn:0,peakQueueOut:0,simEndTime:0,hourlyArrivals:{},congestionEvents:[]};
+  simUpdate._lastSample=0;
   vehicleMarkers.forEach(m=>map.removeLayer(m));
   vehicleMarkers=[];
   poiBadges.forEach(m=>map.removeLayer(m));
   poiBadges=[];
+  document.getElementById('simStatus').textContent='PRONTO';
+  document.getElementById('simStatus').style.background='#1a1a2e';
+  document.getElementById('simStatus').style.color='var(--text-dim)';
   updateUI();
 }
 
 function applyAndReset() { resetSim(); }
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 1: ROUTE VIEWER
+// ═══════════════════════════════════════════════════════════════════
+let routeVisibility = {};
+let routeLayers = {};
+
+function initRouteViewer() {
+  routeMapInst = L.map('routeMap',{zoomControl:true}).setView([45.7968,13.5388],15);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19}).addTo(routeMapInst);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,opacity:0.4}).addTo(routeMapInst);
+
+  // Add POI markers
+  for(const p of POIs){
+    const col = p.label.includes('PESA')?'#eab308':p.label==='Ingresso'?'#22c55e':'#ef4444';
+    L.marker([p.lat,p.lon],{icon:L.divIcon({className:'',html:`<div style="position:relative"><div style="width:10px;height:10px;background:rgba(0,0,0,0.6);border:2px solid ${col};border-radius:50%"></div><div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font:bold 7px monospace;color:#fff;text-shadow:0 0 3px #000,0 0 3px #000;white-space:nowrap">${p.label}</div></div>`,iconSize:[12,12],iconAnchor:[6,6]})}).addTo(routeMapInst);
+  }
+
+  const cardsEl = document.getElementById('routeCards');
+  let html = '';
+  for(const[k,r] of Object.entries(ROUTES_RAW)){
+    routeVisibility[k] = true;
+    const len = pathLenM(r.coords);
+    html += `<div class="route-card" id="rc_${k}" onclick="selectRoute('${k}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="route-header">
+          <div class="route-color" style="background:${r.color}"></div>
+          <div class="route-name">${r.label}</div>
+        </div>
+        <div class="route-toggle on" id="rt_${k}" onclick="event.stopPropagation();toggleRoute('${k}')">✓</div>
+      </div>
+      <div class="route-info">${Math.round(len)}m · ${r.coords.length} punti</div>
+    </div>`;
+
+    // Add to map
+    const ll = r.coords.map(([lo,la])=>[la,lo]);
+    const glow = L.polyline(ll,{color:r.color,weight:10,opacity:0.25,lineCap:'round',lineJoin:'round'}).addTo(routeMapInst);
+    const line = L.polyline(ll,{color:r.color,weight:4,opacity:0.9,lineCap:'round',lineJoin:'round'}).addTo(routeMapInst);
+    routeLayers[k] = [glow, line];
+  }
+  cardsEl.innerHTML = html;
+}
+
+function toggleRoute(k) {
+  routeVisibility[k] = !routeVisibility[k];
+  const el = document.getElementById('rt_'+k);
+  el.classList.toggle('on', routeVisibility[k]);
+  el.textContent = routeVisibility[k]?'✓':'';
+  routeLayers[k].forEach(l=> routeVisibility[k]?l.addTo(routeMapInst):routeMapInst.removeLayer(l));
+}
+
+function toggleAllRoutes() {
+  const anyOn = Object.values(routeVisibility).some(v=>v);
+  for(const k of Object.keys(ROUTES_RAW)){
+    routeVisibility[k] = !anyOn;
+    const el = document.getElementById('rt_'+k);
+    el.classList.toggle('on', !anyOn);
+    el.textContent = !anyOn?'✓':'';
+    routeLayers[k].forEach(l=> !anyOn?l.addTo(routeMapInst):routeMapInst.removeLayer(l));
+  }
+}
+
+function selectRoute(k) {
+  document.querySelectorAll('.route-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('rc_'+k).classList.add('selected');
+  const r = ROUTES_RAW[k];
+  const len = pathLenM(r.coords);
+  const timeMin = len / TRUCK_SPEED_M_PER_MIN;
+  const dests = DESTS.filter(d=>d.routes.includes(k));
+  document.getElementById('routeInfo').innerHTML = `
+    <div style="color:var(--text-bright);font-weight:700;margin-bottom:4px">${r.label}</div>
+    <div>Lunghezza: <b style="color:var(--gold)">${Math.round(len)}m</b></div>
+    <div>Tempo percorrenza (15km/h): <b style="color:var(--gold)">${timeMin.toFixed(1)} min</b></div>
+    <div>Punti GPS: <b>${r.coords.length}</b></div>
+    <div style="margin-top:4px">Destinazioni servite:</div>
+    ${dests.map(d=>`<div style="padding-left:8px">· ${d.label}</div>`).join('')}
+  `;
+
+  // Zoom to route
+  const bounds = L.latLngBounds(r.coords.map(([lo,la])=>[la,lo]));
+  routeMapInst.fitBounds(bounds, {padding:[30,30]});
+}
+
+function exportRoutesPDF() {
+  // Create a printable version
+  const visibleRoutes = Object.entries(ROUTES_RAW).filter(([k])=>routeVisibility[k]);
+  let content = `<html><head><style>
+    body{font-family:Arial,sans-serif;margin:20px;color:#333}
+    h1{font-size:18px;border-bottom:2px solid #c9a84c;padding-bottom:8px;color:#001d3d}
+    h2{font-size:14px;color:#001d3d;margin-top:16px}
+    .route-section{margin-bottom:16px;padding:10px;border:1px solid #ddd;border-radius:6px;page-break-inside:avoid}
+    .color-dot{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:6px}
+    table{width:100%;border-collapse:collapse;margin-top:8px;font-size:11px}
+    th,td{padding:4px 8px;border:1px solid #ddd;text-align:left}
+    th{background:#f5f5f5;font-weight:700}
+    .footer{margin-top:20px;font-size:9px;color:#999;border-top:1px solid #ddd;padding-top:8px}
+  </style></head><body>
+    <h1>FINCANTIERI MONFALCONE — Percorsi Viabilità Camion</h1>
+    <p style="font-size:11px;color:#666">Report generato il ${new Date().toLocaleDateString('it-IT')} · Percorsi visualizzati: ${visibleRoutes.length}/${Object.keys(ROUTES_RAW).length}</p>`;
+
+  for(const[k,r] of visibleRoutes){
+    const len = pathLenM(r.coords);
+    const timeMin = len / TRUCK_SPEED_M_PER_MIN;
+    const dests = DESTS.filter(d=>d.routes.includes(k));
+    content += `<div class="route-section">
+      <h2><span class="color-dot" style="background:${r.color}"></span>${r.label}</h2>
+      <table>
+        <tr><th>Lunghezza</th><td>${Math.round(len)}m</td></tr>
+        <tr><th>Tempo percorrenza (15km/h)</th><td>${timeMin.toFixed(1)} min</td></tr>
+        <tr><th>Punti GPS</th><td>${r.coords.length}</td></tr>
+        <tr><th>Destinazioni</th><td>${dests.map(d=>d.label).join(', ')}</td></tr>
+      </table>
+    </div>`;
+  }
+
+  content += `<div class="footer">Fincantieri Monfalcone · Simulazione Viabilità Camion · Dati GeoJSON</div></body></html>`;
+
+  const blob = new Blob([content], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url,'_blank');
+  setTimeout(()=>{
+    if(w) w.print();
+  }, 500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 2: LIVE MONITOR
+// ═══════════════════════════════════════════════════════════════════
+function updateMonitor() {
+  const el = document.getElementById('monitorContent');
+  const cfg = getCfg();
+
+  const act = vehicles.filter(v=>v.state!=='wait'&&v.state!=='done');
+  const byState = {};
+  vehicles.forEach(v=> { byState[v.state]=(byState[v.state]||0)+1; });
+
+  // Group active trucks by destination
+  const byDest = {};
+  act.forEach(v=>{
+    if(!byDest[v.destLabel]) byDest[v.destLabel]={inTransit:0,inQueue:0,unloading:0,returning:0};
+    if(v.state==='toPesaIn'||v.state==='toDest') byDest[v.destLabel].inTransit++;
+    else if(v.state==='qIn'||v.state==='sIn'||v.state==='qOut'||v.state==='sOut') byDest[v.destLabel].inQueue++;
+    else if(v.state==='unload') byDest[v.destLabel].unloading++;
+    else if(v.state==='toPesaOut'||v.state==='toExit') byDest[v.destLabel].returning++;
+  });
+
+  // Estimate travel times for active + completed vehicles
+  const avgTimes = {};
+  for(const[dest, times] of Object.entries(telemetry.travelTimes)){
+    if(times.length>0){
+      const avg = times.reduce((s,t)=>s+t,0)/times.length;
+      const d = DESTS.find(d=>d.id===dest);
+      if(d) avgTimes[d.label] = avg;
+    }
+  }
+
+  el.innerHTML = `
+    <!-- STATUS OVERVIEW -->
+    <div class="monitor-card">
+      <h3>📊 STATO GENERALE</h3>
+      <div class="monitor-metric"><span class="metric-label">Ora simulata</span><span class="metric-value" style="color:var(--gold)">${fmtTime(simTime)}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Camion totali</span><span class="metric-value">${vehicles.length}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Completati</span><span class="metric-value" style="color:var(--green)">${stats.served}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Attivi in campo</span><span class="metric-value" style="color:var(--orange)">${act.length}</span></div>
+      <div class="monitor-metric"><span class="metric-label">In attesa arrivo</span><span class="metric-value">${byState['wait']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Progresso</span><span class="metric-value">${vehicles.length>0?Math.round(stats.served/vehicles.length*100):0}%</span></div>
+    </div>
+
+    <!-- PESA STATUS -->
+    <div class="monitor-card">
+      <h3>⚖️ STATO PESA</h3>
+      <div class="monitor-metric"><span class="metric-label">Coda ENTRATA</span><span class="metric-value" style="color:${stats.qIn>4?'var(--red)':stats.qIn>1?'var(--yellow)':'var(--green)'}">${stats.qIn} ${stats.qIn>4?'⚠️':''}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Coda USCITA</span><span class="metric-value" style="color:${stats.qOut>4?'var(--red)':stats.qOut>1?'var(--yellow)':'var(--green)'}">${stats.qOut} ${stats.qOut>4?'⚠️':''}</span></div>
+      <div class="monitor-metric"><span class="metric-label">In pesatura IN</span><span class="metric-value">${byState['sIn']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">In pesatura OUT</span><span class="metric-value">${byState['sOut']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Max coda IN (storico)</span><span class="metric-value" style="color:var(--red)">${stats.maxIn}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Max coda OUT (storico)</span><span class="metric-value" style="color:var(--red)">${stats.maxOut}</span></div>
+      <div class="monitor-metric"><span class="metric-label">Utilizzazione (ρ)</span><span class="metric-value">${(cfg.trucksPerDay/540/(1/cfg.pesaTime)).toFixed(2)}</span></div>
+    </div>
+
+    <!-- BREAKDOWN BY STATE -->
+    <div class="monitor-card">
+      <h3>🚛 DISTRIBUZIONE STATI</h3>
+      <div class="monitor-metric"><span class="metric-label">🟢 In attesa arrivo</span><span class="metric-value">${byState['wait']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🔴 Verso pesa</span><span class="metric-value">${byState['toPesaIn']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🟡 In coda entrata</span><span class="metric-value">${byState['qIn']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🟡 Pesatura IN</span><span class="metric-value">${byState['sIn']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🔴 Verso destinazione</span><span class="metric-value">${byState['toDest']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">⚫ In scarico</span><span class="metric-value">${byState['unload']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🔵 Rientro verso pesa</span><span class="metric-value">${byState['toPesaOut']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🟡 In coda uscita</span><span class="metric-value">${byState['qOut']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🟡 Pesatura OUT</span><span class="metric-value">${byState['sOut']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">🔵 Verso uscita</span><span class="metric-value">${byState['toExit']||0}</span></div>
+      <div class="monitor-metric"><span class="metric-label">✅ Completati</span><span class="metric-value" style="color:var(--green)">${byState['done']||0}</span></div>
+    </div>
+
+    <!-- TRAVEL TIMES BY DEST -->
+    <div class="monitor-card">
+      <h3>⏱️ TEMPI PERCORRENZA (MEDIA)</h3>
+      ${Object.keys(avgTimes).length===0?'<div style="color:var(--text-dim);font-size:9px">Dati in accumulo...</div>':''}
+      ${Object.entries(avgTimes).map(([dest,avg])=>`
+        <div class="monitor-metric">
+          <span class="metric-label">${dest}</span>
+          <span class="metric-value">${avg.toFixed(1)} min</span>
+        </div>
+      `).join('')}
+    </div>
+
+    <!-- ACTIVE BY DESTINATION -->
+    <div class="monitor-card">
+      <h3>📍 CAMION PER DESTINAZIONE</h3>
+      ${Object.entries(byDest).map(([dest,counts])=>`
+        <div style="margin-bottom:6px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-bright);margin-bottom:2px">${dest}</div>
+          <div style="display:flex;gap:8px;font-size:9px">
+            <span style="color:var(--orange)">Transito: ${counts.inTransit}</span>
+            <span style="color:var(--yellow)">Coda: ${counts.inQueue}</span>
+            <span style="color:var(--text-dim)">Scarico: ${counts.unloading}</span>
+            <span style="color:var(--cyan)">Rientro: ${counts.returning}</span>
+          </div>
+        </div>
+      `).join('')}
+      ${Object.keys(byDest).length===0?'<div style="color:var(--text-dim);font-size:9px">Nessun camion attivo</div>':''}
+    </div>
+
+    <!-- QUEUE HISTORY (mini sparkline) -->
+    <div class="monitor-card" style="grid-column:span 2">
+      <h3>📈 ANDAMENTO CODE (ultimi dati)</h3>
+      <div style="display:flex;gap:20px">
+        <div style="flex:1">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">Coda Entrata</div>
+          ${renderMiniChart(telemetry.queueInHistory.slice(-60), 'var(--yellow)')}
+        </div>
+        <div style="flex:1">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">Coda Uscita</div>
+          ${renderMiniChart(telemetry.queueOutHistory.slice(-60), 'var(--red)')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMiniChart(data, color) {
+  if(data.length<2) return '<div style="height:50px;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:9px">In attesa dati...</div>';
+  const maxVal = Math.max(...data.map(d=>d.val),1);
+  const w=400, h=50;
+  const pts = data.map((d,i)=>`${(i/(data.length-1))*w},${h-(d.val/maxVal)*h}`).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:50px">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+    <text x="${w-2}" y="10" fill="var(--text-dim)" font-size="8" text-anchor="end">max: ${maxVal}</text>
+  </svg>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TAB 3: REPORT
+// ═══════════════════════════════════════════════════════════════════
+function generateReport() {
+  const el = document.getElementById('reportContent');
+  const cfg = getCfg();
+  const t = telemetry;
+  
+  if(t.truckLog.length===0){
+    el.innerHTML='<div style="text-align:center;padding:40px;color:var(--text-dim)"><div style="font-size:24px;margin-bottom:8px">📋</div><div style="font-size:11px">Avvia e completa una simulazione per generare il report</div></div>';
+    return;
+  }
+
+  // Compute KPIs
+  const avgWaitIn = t.waitTimesIn.reduce((s,v)=>s+v,0)/t.waitTimesIn.length;
+  const avgWaitOut = t.waitTimesOut.reduce((s,v)=>s+v,0)/t.waitTimesOut.length;
+  const maxWaitIn = Math.max(...t.waitTimesIn);
+  const maxWaitOut = Math.max(...t.waitTimesOut);
+  const allTotalTimes = t.truckLog.map(l=>l.totalTime);
+  const avgTotalTime = allTotalTimes.reduce((s,v)=>s+v,0)/allTotalTimes.length;
+  const maxTotalTime = Math.max(...allTotalTimes);
+  const minTotalTime = Math.min(...allTotalTimes);
+  const throughput = t.truckLog.length / ((t.simEndTime-420)/60); // trucks/hour
+
+  // By destination stats
+  const destStats = {};
+  for(const log of t.truckLog){
+    if(!destStats[log.dest]) destStats[log.dest]={count:0,totalTime:0,waitIn:0,waitOut:0};
+    destStats[log.dest].count++;
+    destStats[log.dest].totalTime+=log.totalTime;
+    destStats[log.dest].waitIn+=log.waitIn;
+    destStats[log.dest].waitOut+=log.waitOut;
+  }
+
+  // By route stats
+  const routeStats = {};
+  for(const log of t.truckLog){
+    if(!routeStats[log.route]) routeStats[log.route]={count:0,totalTime:0};
+    routeStats[log.route].count++;
+    routeStats[log.route].totalTime+=log.totalTime;
+  }
+
+  // Hourly distribution
+  const hourlyHtml = Object.entries(t.hourlyArrivals).sort(([a],[b])=>a-b).map(([h,c])=>`
+    <div class="monitor-metric"><span class="metric-label">${String(h).padStart(2,'0')}:00-${String(h).padStart(2,'0')}:59</span><span class="metric-value">${c}</span></div>
+  `).join('');
+
+  // Queue history chart
+  const qInChartSvg = renderReportChart(t.queueInHistory, 'var(--yellow)', 'Coda Entrata');
+  const qOutChartSvg = renderReportChart(t.queueOutHistory, 'var(--red)', 'Coda Uscita');
+
+  // Congestion analysis
+  const congestionMin = t.congestionEvents.length > 0 ?
+    t.congestionEvents.reduce((acc, e)=>{
+      const key = Math.floor(e.t/30)*30;
+      acc[key] = (acc[key]||0)+1;
+      return acc;
+    }, {}) : {};
+
+  // P90/P95 wait times
+  const sortedWaitIn = [...t.waitTimesIn].sort((a,b)=>a-b);
+  const sortedWaitOut = [...t.waitTimesOut].sort((a,b)=>a-b);
+  const p90WaitIn = sortedWaitIn[Math.floor(sortedWaitIn.length*0.9)]||0;
+  const p95WaitIn = sortedWaitIn[Math.floor(sortedWaitIn.length*0.95)]||0;
+  const p90WaitOut = sortedWaitOut[Math.floor(sortedWaitOut.length*0.9)]||0;
+
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:var(--text-bright)">Report Simulazione Viabilità</div>
+        <div style="font-size:9px;color:var(--text-dim)">Generato: ${new Date().toLocaleString('it-IT')} · Camion: ${cfg.trucksPerDay} · Pesa: ${cfg.pesaTime}min · Scarico: ${cfg.unloadTime}min</div>
+      </div>
+      <button class="btn btn-gold" onclick="exportReportPDF()">📄 Esporta Report PDF</button>
+    </div>
+
+    <!-- KPI SUMMARY -->
+    <div class="report-section">
+      <h3>🎯 KPI PRINCIPALI</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
+        <div class="stat-box" style="text-align:center">
+          <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px">THROUGHPUT</div>
+          <div style="font-size:20px;font-weight:700;color:var(--gold)">${throughput.toFixed(1)}</div>
+          <div style="font-size:8px;color:var(--text-dim)">camion/ora</div>
+        </div>
+        <div class="stat-box" style="text-align:center">
+          <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px">TEMPO MEDIO TOTALE</div>
+          <div style="font-size:20px;font-weight:700;color:var(--cyan)">${avgTotalTime.toFixed(1)}</div>
+          <div style="font-size:8px;color:var(--text-dim)">minuti</div>
+        </div>
+        <div class="stat-box" style="text-align:center">
+          <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px">ATTESA MEDIA PESA IN</div>
+          <div style="font-size:20px;font-weight:700;color:${avgWaitIn>15?'var(--red)':'var(--green)'}">${avgWaitIn.toFixed(1)}</div>
+          <div style="font-size:8px;color:var(--text-dim)">minuti</div>
+        </div>
+        <div class="stat-box" style="text-align:center">
+          <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px">ATTESA MEDIA PESA OUT</div>
+          <div style="font-size:20px;font-weight:700;color:${avgWaitOut>15?'var(--red)':'var(--green)'}">${avgWaitOut.toFixed(1)}</div>
+          <div style="font-size:8px;color:var(--text-dim)">minuti</div>
+        </div>
+        <div class="stat-box" style="text-align:center">
+          <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px">PICCO CODA ENTRATA</div>
+          <div style="font-size:20px;font-weight:700;color:var(--red)">${t.peakQueueIn}</div>
+          <div style="font-size:8px;color:var(--text-dim)">camion</div>
+        </div>
+        <div class="stat-box" style="text-align:center">
+          <div style="font-size:8px;color:var(--text-dim);letter-spacing:1px">FINE SMALTIMENTO</div>
+          <div style="font-size:20px;font-weight:700;color:var(--gold)">${fmtTime(t.simEndTime)}</div>
+          <div style="font-size:8px;color:var(--text-dim)">ultimo camion uscito</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAIT TIMES ANALYSIS -->
+    <div class="report-section">
+      <h3>⏱️ ANALISI TEMPI DI ATTESA</h3>
+      <table class="report-table">
+        <tr><th>Metrica</th><th>Pesa Entrata</th><th>Pesa Uscita</th></tr>
+        <tr><td>Media</td><td>${avgWaitIn.toFixed(1)} min</td><td>${avgWaitOut.toFixed(1)} min</td></tr>
+        <tr><td>Massimo</td><td>${maxWaitIn.toFixed(1)} min</td><td>${maxWaitOut.toFixed(1)} min</td></tr>
+        <tr><td>P90</td><td>${p90WaitIn.toFixed(1)} min</td><td>${p90WaitOut.toFixed(1)} min</td></tr>
+        <tr><td>P95 (entrata)</td><td>${p95WaitIn.toFixed(1)} min</td><td>—</td></tr>
+        <tr><td>Picco coda</td><td>${t.peakQueueIn} camion</td><td>${t.peakQueueOut} camion</td></tr>
+        <tr><td>Eventi congestione (>5)</td><td colspan="2">${t.congestionEvents.length} eventi</td></tr>
+      </table>
+    </div>
+
+    <!-- QUEUE HISTORY CHARTS -->
+    <div class="report-section">
+      <h3>📈 ANDAMENTO CODE NEL TEMPO</h3>
+      <div style="display:flex;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:300px">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">Coda Entrata</div>
+          ${qInChartSvg}
+        </div>
+        <div style="flex:1;min-width:300px">
+          <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">Coda Uscita</div>
+          ${qOutChartSvg}
+        </div>
+      </div>
+    </div>
+
+    <!-- BY DESTINATION -->
+    <div class="report-section">
+      <h3>📍 ANALISI PER DESTINAZIONE</h3>
+      <table class="report-table">
+        <tr><th>Destinazione</th><th>Camion</th><th>Tempo medio totale</th><th>Attesa media IN</th><th>Attesa media OUT</th></tr>
+        ${Object.entries(destStats).map(([dest,s])=>`
+          <tr>
+            <td>${dest}</td>
+            <td>${s.count}</td>
+            <td>${(s.totalTime/s.count).toFixed(1)} min</td>
+            <td>${(s.waitIn/s.count).toFixed(1)} min</td>
+            <td>${(s.waitOut/s.count).toFixed(1)} min</td>
+          </tr>
+        `).join('')}
+      </table>
+    </div>
+
+    <!-- BY ROUTE -->
+    <div class="report-section">
+      <h3>🛣️ ANALISI PER PERCORSO</h3>
+      <table class="report-table">
+        <tr><th>Percorso</th><th>Camion</th><th>Tempo medio</th><th>Lunghezza</th></tr>
+        ${Object.entries(routeStats).map(([rk,s])=>{
+          const r = ROUTES_RAW[rk];
+          const len = r?pathLenM(r.coords):0;
+          return `<tr>
+            <td><span style="display:inline-block;width:10px;height:3px;background:${r?r.color:'#888'};border-radius:1px;margin-right:4px"></span>${r?r.label:rk}</td>
+            <td>${s.count}</td>
+            <td>${(s.totalTime/s.count).toFixed(1)} min</td>
+            <td>${Math.round(len)}m</td>
+          </tr>`;
+        }).join('')}
+      </table>
+    </div>
+
+    <!-- HOURLY DISTRIBUTION -->
+    <div class="report-section">
+      <h3>🕐 DISTRIBUZIONE ORARIA ARRIVI</h3>
+      ${hourlyHtml}
+    </div>
+
+    <!-- TRAVEL TIME DISTRIBUTION -->
+    <div class="report-section">
+      <h3>📊 DISTRIBUZIONE TEMPI TOTALI</h3>
+      <table class="report-table">
+        <tr><th>Statistica</th><th>Valore</th></tr>
+        <tr><td>Minimo</td><td>${minTotalTime.toFixed(1)} min</td></tr>
+        <tr><td>Media</td><td>${avgTotalTime.toFixed(1)} min</td></tr>
+        <tr><td>Massimo</td><td>${maxTotalTime.toFixed(1)} min</td></tr>
+        <tr><td>Range</td><td>${(maxTotalTime-minTotalTime).toFixed(1)} min</td></tr>
+      </table>
+    </div>
+
+    <!-- UTILIZATION & RECOMMENDATIONS -->
+    <div class="report-section">
+      <h3>💡 ANALISI E RACCOMANDAZIONI</h3>
+      <div style="font-size:10px;line-height:1.6;color:var(--text)">
+        ${generateRecommendations(cfg, t, avgWaitIn, avgWaitOut, throughput)}
+      </div>
+    </div>
+
+    <!-- FULL TRUCK LOG (first 30) -->
+    <div class="report-section">
+      <h3>📋 LOG DETTAGLIO CAMION (primi 30)</h3>
+      <div style="overflow-x:auto">
+        <table class="report-table">
+          <tr><th>#</th><th>Dest.</th><th>Percorso</th><th>Arrivo</th><th>Pesa IN</th><th>A dest.</th><th>Fine scarico</th><th>Pesa OUT</th><th>Uscita</th><th>Tot.(min)</th><th>Attesa IN</th><th>Attesa OUT</th></tr>
+          ${t.truckLog.slice(0,30).map(l=>`
+            <tr>
+              <td>${l.id+1}</td>
+              <td>${l.dest}</td>
+              <td>${ROUTES_RAW[l.route]?ROUTES_RAW[l.route].label:l.route}</td>
+              <td>${fmtTime(l.arrival)}</td>
+              <td>${fmtTime(l.pesaInStart)}</td>
+              <td>${fmtTime(l.atDest)}</td>
+              <td>${fmtTime(l.unloadEnd)}</td>
+              <td>${fmtTime(l.pesaOutStart)}</td>
+              <td>${fmtTime(l.exit)}</td>
+              <td style="font-weight:700">${l.totalTime.toFixed(0)}</td>
+              <td style="color:${l.waitIn>15?'var(--red)':'var(--text)'}">${l.waitIn.toFixed(0)}</td>
+              <td style="color:${l.waitOut>15?'var(--red)':'var(--text)'}">${l.waitOut.toFixed(0)}</td>
+            </tr>
+          `).join('')}
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderReportChart(data, color, title) {
+  if(data.length<2) return '<div style="height:100px;background:var(--bg-dark);border-radius:4px;display:flex;align-items:center;justify-content:center;color:var(--text-dim)">Dati insufficienti</div>';
+  const maxVal = Math.max(...data.map(d=>d.val),1);
+  const w=600, h=100, pad=30;
+  const pts = data.map((d,i)=>`${pad+(i/(data.length-1))*(w-pad*2)},${h-10-(d.val/maxVal)*(h-20)}`).join(' ');
+
+  // Time labels
+  const firstT = data[0].t, lastT = data[data.length-1].t;
+  const labels = [];
+  for(let t=Math.ceil(firstT/60)*60; t<=lastT; t+=60){
+    const x = pad+((t-firstT)/(lastT-firstT))*(w-pad*2);
+    labels.push(`<text x="${x}" y="${h-1}" fill="var(--text-dim)" font-size="7" text-anchor="middle">${fmtTime(t)}</text>`);
+    labels.push(`<line x1="${x}" y1="${h-10}" x2="${x}" y2="5" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>`);
+  }
+
+  // Y axis
+  const yLabels = [];
+  for(let v=0;v<=maxVal;v+=Math.max(1,Math.ceil(maxVal/4))){
+    const y = h-10-(v/maxVal)*(h-20);
+    yLabels.push(`<text x="${pad-4}" y="${y+3}" fill="var(--text-dim)" font-size="7" text-anchor="end">${v}</text>`);
+    yLabels.push(`<line x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="0.5"/>`);
+  }
+
+  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:100px;background:var(--bg-dark);border-radius:4px">
+    ${labels.join('')}
+    ${yLabels.join('')}
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function generateRecommendations(cfg, t, avgWaitIn, avgWaitOut, throughput) {
+  const rho = (cfg.trucksPerDay/540)/(1/cfg.pesaTime);
+  let rec = '';
+
+  if(rho > 0.85) {
+    rec += `<p style="color:var(--red)">⚠️ <b>CRITICITÀ:</b> L'utilizzazione della pesa (ρ=${rho.toFixed(2)}) è molto alta. Il sistema è prossimo alla saturazione. Con ${cfg.trucksPerDay} camion/giorno e ${cfg.pesaTime} min/pesata, si raccomanda:</p>
+    <ul style="margin:4px 0 8px 16px"><li>Ridurre il tempo di pesata (automazione, pre-registrazione)</li><li>Considerare una seconda linea di pesatura</li><li>Distribuire gli arrivi su fasce orarie più ampie</li></ul>`;
+  } else if(rho > 0.7) {
+    rec += `<p style="color:var(--yellow)">⚠ <b>ATTENZIONE:</b> Utilizzazione pesa al ${(rho*100).toFixed(0)}%. Margine limitato per picchi di traffico.</p>`;
+  } else {
+    rec += `<p style="color:var(--green)">✅ <b>BUONO:</b> Utilizzazione pesa al ${(rho*100).toFixed(0)}%. Buon margine operativo.</p>`;
+  }
+
+  if(avgWaitIn > 15) {
+    rec += `<p style="color:var(--red)">⚠️ Attesa media in entrata elevata (${avgWaitIn.toFixed(1)} min). Considerare slot di prenotazione o arrivi scaglionati.</p>`;
+  }
+
+  if(t.peakQueueIn > 8) {
+    rec += `<p style="color:var(--red)">⚠️ Picco coda entrata: ${t.peakQueueIn} camion. Rischio di occupazione stradale e interferenza con la viabilità interna.</p>`;
+  }
+
+  const endHour = t.simEndTime / 60;
+  if(endHour > 19) {
+    rec += `<p style="color:var(--orange)">⚠ Smaltimento completato alle ${fmtTime(t.simEndTime)}, ben oltre l'orario standard. Valutare riduzione carico o turno prolungato.</p>`;
+  }
+
+  rec += `<p><b>Throughput effettivo:</b> ${throughput.toFixed(1)} camion/ora. `;
+  rec += `Capacità teorica pesa: ${(60/cfg.pesaTime).toFixed(1)} camion/ora.</p>`;
+
+  rec += `<p><b>Tempo totale medio per camion:</b> ${(t.truckLog.reduce((s,l)=>s+l.totalTime,0)/t.truckLog.length).toFixed(1)} min (include transito + attesa + scarico + rientro).</p>`;
+
+  return rec;
+}
+
+function exportReportPDF() {
+  const content = document.getElementById('reportContent').innerHTML;
+  const html = `<html><head><style>
+    body{font-family:Arial,sans-serif;margin:20px;color:#333;background:#fff;font-size:11px}
+    h3{font-size:12px;color:#001d3d;border-bottom:1px solid #c9a84c;padding-bottom:4px}
+    table{width:100%;border-collapse:collapse;font-size:10px;margin-bottom:12px}
+    th,td{padding:3px 6px;border:1px solid #ddd;text-align:left}
+    th{background:#f5f5f5}
+    .stat-box{border:1px solid #ddd;border-radius:4px;padding:8px;text-align:center}
+    .report-section{margin-bottom:16px;page-break-inside:avoid}
+    .monitor-metric{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #eee}
+    svg{max-width:100%}
+    .btn,.btn-gold{display:none!important}
+  </style></head><body>
+    <h1 style="font-size:16px;color:#001d3d;border-bottom:2px solid #c9a84c;padding-bottom:8px">FINCANTIERI MONFALCONE — Report Simulazione Viabilità</h1>
+    <p style="color:#666;font-size:9px">Generato: ${new Date().toLocaleString('it-IT')}</p>
+    ${content}
+  </body></html>`;
+
+  const blob = new Blob([html], {type:'text/html'});
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url,'_blank');
+  setTimeout(()=>{if(w)w.print();},500);
+}
 </script>
 </body>
 </html>
